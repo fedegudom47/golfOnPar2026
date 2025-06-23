@@ -28,7 +28,7 @@ def get_dispersion(avg_carry):
     dist = 0.04 * avg_carry    # ~4% of distance
     return side, dist
 
-n_shots = 100
+n_shots = 30
 all_shots = []
 
 # Simulate each club’s pattern
@@ -85,4 +85,4 @@ plt.gca().set_aspect('equal', adjustable='box')
 plt.tight_layout()
 plt.show()
 
-df.to_csv("Trackman Fake Data/simulated_lpga_shot_data.csv", index=False)
+df.to_csv("PART 1/Trackman Fake Data/simulated_lpga_shot_data.csv", index=False)
