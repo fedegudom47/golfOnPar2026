@@ -232,8 +232,10 @@ def simulate_putt(ball_position, pin_position, seed = None, verbose=True):
         putts = 1
     elif simulated_avg < 2.5:
         putts = 2
-    else:
+    elif simulated_avg < 3.5:
         putts = 3
+    else:
+        putts = 4
 
     # Print output
     if verbose:

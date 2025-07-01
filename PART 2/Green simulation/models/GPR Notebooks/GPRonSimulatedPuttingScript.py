@@ -61,7 +61,7 @@ class MyGaussianModel(gpytorch.models.ExactGP):
         super().__init__(train_x, train_y, likelihood)
         self.mean_module = gpytorch.means.ZeroMean()
         rbf = gpytorch.kernels.RBFKernel()
-        rbf.lengthscale = 30.0  # <-- set the initial smoothness      
+        rbf.lengthscale = 20.0  # <-- set the initial smoothness      
         self.covar_module =  gpytorch.kernels.ScaleKernel(rbf)
   
     

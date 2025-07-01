@@ -33,7 +33,7 @@ X = putt_distances.reshape(-1, 1)
 y = avg_vals.reshape(-1, 1)
 
 # Define kernel (RBF + noise)
-kernel = GPy.kern.RBF(input_dim=1, variance=1.0, lengthscale=10.0)
+kernel = GPy.kern.RBF(input_dim=1,  lengthscale=10.0) #variance=1.0,
 
 # Bayesian GP model with Gaussian likelihood
 model = GPy.models.GPRegression(X, y, kernel)
