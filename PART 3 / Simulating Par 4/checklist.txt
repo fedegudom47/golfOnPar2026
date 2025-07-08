@@ -1,0 +1,3 @@
+- better visuals/readable
+- better prior -> set it to mean
+- play with water -> look at boundary evaluation
