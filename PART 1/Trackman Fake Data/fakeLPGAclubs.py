@@ -17,7 +17,13 @@ club_data = {
     'PW': 111,
     '50 deg': 107,
     '54 deg': 96,
-    '60 deg': 78
+    '60 deg': 78,
+    'H 50 deg': 85,
+    '3Q 60 deg': 65,
+    'H 54 deg': 54,
+    'H 60 deg': 39,
+    '1Q 60 deg': 25,
+    '1E 60 deg' : 15
 }
 
 
@@ -85,4 +91,4 @@ plt.gca().set_aspect('equal', adjustable='box')
 plt.tight_layout()
 plt.show()
 
-df.to_csv("PART 1/Trackman Fake Data/simulated_lpga_shot_data.csv", index=False)
+df.to_csv("PART 1/Trackman Fake Data/simulated_lpga_shot_data2.csv", index=False)
