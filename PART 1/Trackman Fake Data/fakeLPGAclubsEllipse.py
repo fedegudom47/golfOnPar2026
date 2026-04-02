@@ -18,7 +18,13 @@ club_data = {
     'PW': 111,
     '50 deg': 107,
     '54 deg': 96,
-    '60 deg': 78
+    '60 deg': 78,
+    'H 50 deg': 85,
+    '3Q 60 deg': 65,
+    'H 54 deg': 54,
+    'H 60 deg': 39,
+    '1Q 60 deg': 25,
+    '1E 60 deg' : 15
 }
 
 # Returns (side sd, distance sd) based on carry

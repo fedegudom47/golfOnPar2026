@@ -1,0 +1,6 @@
+2026-03-26 07:30:31,606 [MAIN] Grid: 3 tasks  |  workers: 2  |  mode: local
+2026-03-26 07:30:44,572 [MAIN]   optimization_d1.00_w230                   n=16  [OK]
+2026-03-26 07:30:45,414 [MAIN]   optimization_d0.80_w230                   n=16  [OK]
+2026-03-26 07:30:51,265 [MAIN]   optimization_d1.20_w230                   n=16  [OK]
+2026-03-26 07:30:51,770 [MAIN] Done: 3 / 3 tasks succeeded.
+2026-03-26 07:30:51,779 [MAIN] Summary written → outputs/summary.csv

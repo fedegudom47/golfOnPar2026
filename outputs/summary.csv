@@ -1,0 +1,4 @@
+job_id,n_results,status,error,plot,data
+optimization_d1.00_w230,16,ok,,outputs/optimization_d1.00_w230_plot.png,outputs/optimization_d1.00_w230_data.npz
+optimization_d0.80_w230,16,ok,,outputs/optimization_d0.80_w230_plot.png,outputs/optimization_d0.80_w230_data.npz
+optimization_d1.20_w230,16,ok,,outputs/optimization_d1.20_w230_plot.png,outputs/optimization_d1.20_w230_data.npz

@@ -1,0 +1,4 @@
+job_id,n_results,status,error,plot,data
+optimization_d1.00_w230,0,error,[Errno 2] No such file or directory: '/data/gpr_green_dataset.csv',,
+optimization_d0.80_w230,0,error,[Errno 2] No such file or directory: '/data/gpr_green_dataset.csv',,
+optimization_d1.20_w230,0,error,[Errno 2] No such file or directory: '/data/gpr_green_dataset.csv',,

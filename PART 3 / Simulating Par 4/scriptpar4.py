@@ -5,7 +5,7 @@ import geopandas as gpd
 from shapely import wkt
 from shapely.geometry import Point
 
-hole_9 = pd.read_csv("/Users/federicadomecq/Documents/golfModeL47-1/PART 1/Map Digitisation/Mountain Meadows/MountainMeadows_Separated/hole_9/hole_9_data.csv")
+hole_9 = pd.read_csv("/Users/federicadomecq/gitrepos/golfOnPar/PART 1/Map Digitisation/Mountain Meadows/MountainMeadows_Separated/hole_9/hole_9_data.csv")
 
 hole = (5, 174)
 
@@ -33,7 +33,7 @@ longest_teebox = teeboxes.loc[teeboxes["dist_to_green"].idxmax()]
 tee_point = longest_teebox["centroid"]
 
 ## ------------- Extension
-gdf = gpd.read_file("/Users/federicadomecq/Documents/golfModeL47-1/PART 3 / Simulating Par 4/newshapes.geojson")
+gdf = gpd.read_file("/Users/federicadomecq/gitrepos/golfOnPar/PART 3 / Simulating Par 4/newshapes.geojson")
 
 # Filter by terrain type
 new_fairway = gdf[gdf["lie"] == "fairway"]
@@ -138,7 +138,7 @@ new_fairway["geometry"] = new_fairway["geometry"].apply(
 
 # --- Hazard 3 addition --------------
 hazard3_centroid = new_hazard3.iloc[0].geometry.centroid
-target_x3, target_y3 = 0, 230
+target_x3, target_y3 = 0, 210 # changed from 230 to 210
 x3_shift = target_x3 - hazard3_centroid.x
 y3_shift = target_y3 - hazard3_centroid.y
 
@@ -241,6 +241,26 @@ def plot_hole_layout(hole_geom_df, new_fairway=None, new_hazards=None,
     plt.tight_layout()
     #plt.show()
     return ax
+
+# 1. Ensure your strategy points are updated for the final hole distance
+hole_vec = np.array(hole)
+tee_vec = np.array(tee_point)
+hole_to_tee_vec = hole_vec - tee_vec
+ht_length = np.linalg.norm(hole_to_tee_vec)
+
+# 2. Run the plot with all components
+ax = plot_hole_layout(
+    hole_geom_df=hole_9,             # Your base data (Mountain Meadows)
+    new_fairway=new_fairway,         # Your manual fairway extension
+    new_hazards=[new_hazard3],       # Your specific hazard 3 addition
+    tee_point=tee_point,             # The red 'x'
+    hole_point=hole,                 # The black 'o'
+    title="Final Verification of Hole 9 Layout",
+    plot_approach=True               # Shows the black grid points (strategy points)
+)
+
+# 3. Force the display
+plt.show()
 
 
 putts_og_loc = pd.read_csv("/Users/federicadomecq/Documents/golfModeL47-1/PART 3 / Simulating Par 4/gpr_green_dataset.csv")
@@ -453,13 +473,10 @@ def get_water_intersection(starting_point, ball_in_water):
 def evaluate_water_hazard(starting_point, point, target):
     drop_location = get_water_intersection(starting_point, point)
     if drop_location:
-        if green_polygon.contains(Point(drop_location)):
-            return 1 + evaluate_on_green(drop_location)
-        else:
-            return 1 + evaluate_broadie(drop_location, target, "rough")
+        return 1 + evaluate_broadie(drop_location, target, "rough")
     return np.nan
 
-lpga_clubs = pd.read_csv("/Users/federicadomecq/Documents/golfModeL47-1/PART 1/Trackman Fake Data/simulated_lpga_shot_data.csv")
+lpga_clubs = pd.read_csv("/Users/federicadomecq/Documents/golfModeL47-1/PART 1/Trackman Fake Data/simulated_lpga_shot_data2.csv")
 
 # side = x, carry = y
 club_distributions = {}

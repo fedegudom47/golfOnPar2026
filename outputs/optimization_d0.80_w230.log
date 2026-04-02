@@ -1,0 +1,25 @@
+2026-03-26 07:30:33,873 INFO Worker started  job_id=optimization_d0.80_w230
+2026-03-26 07:30:35,469 INFO Hole layout built.
+2026-03-26 07:30:36,644 INFO Putt GPR trained.
+2026-03-26 07:30:36,716 INFO OptimizationMechanism training complete.
+2026-03-26 07:30:36,718 INFO Mechanism trained  type=optimization
+2026-03-26 07:30:36,718 INFO Running simulation on 16 strategy points.
+2026-03-26 07:30:36,718 INFO simulate_all: 0 / 16 points done
+2026-03-26 07:30:36,950 INFO simulate_all: 1 / 16 points done
+2026-03-26 07:30:37,129 INFO simulate_all: 2 / 16 points done
+2026-03-26 07:30:37,290 INFO simulate_all: 3 / 16 points done
+2026-03-26 07:30:37,460 INFO simulate_all: 4 / 16 points done
+2026-03-26 07:30:37,762 INFO simulate_all: 5 / 16 points done
+2026-03-26 07:30:38,118 INFO simulate_all: 6 / 16 points done
+2026-03-26 07:30:38,555 INFO simulate_all: 7 / 16 points done
+2026-03-26 07:30:39,276 INFO simulate_all: 8 / 16 points done
+2026-03-26 07:30:39,953 INFO simulate_all: 9 / 16 points done
+2026-03-26 07:30:40,661 INFO simulate_all: 10 / 16 points done
+2026-03-26 07:30:41,406 INFO simulate_all: 11 / 16 points done
+2026-03-26 07:30:42,088 INFO simulate_all: 12 / 16 points done
+2026-03-26 07:30:42,882 INFO simulate_all: 13 / 16 points done
+2026-03-26 07:30:43,561 INFO simulate_all: 14 / 16 points done
+2026-03-26 07:30:44,215 INFO simulate_all: 15 / 16 points done
+2026-03-26 07:30:45,058 INFO simulate_all complete: 16 / 16 points returned results.
+2026-03-26 07:30:45,058 INFO Simulation complete: 16 results.
+2026-03-26 07:30:45,414 INFO Saved plot → outputs/optimization_d0.80_w230_plot.png

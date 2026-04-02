@@ -1,0 +1,3 @@
+seed,convergence_N,n_iterations,wall_time_s,did_not_converge,stopped_early
+0,,2,339.4956033329945,False,True
+1,,2,348.57868600000074,False,True

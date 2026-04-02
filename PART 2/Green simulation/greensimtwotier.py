@@ -8,7 +8,7 @@ import matplotlib.colors as mcolors
 import os
 
 # Load Green Polygon Data (for shape)
-df = pd.read_csv("PART 1/Map Digitisation/Mountain Meadows/MountainMeadows_Separated/hole_9/hole_9_data.csv")
+df = pd.read_csv("/Users/federicadomecq/Documents/golfModeL47-1/PART 1/Map Digitisation/Mountain Meadows/MountainMeadows_Separated/hole_9/hole_9_data.csv")
 green_info = df[df["lie"] == "green"].iloc[0]
 green_polygon = wkt.loads(green_info["WKT"])
 
@@ -56,8 +56,7 @@ Z = green_contour(X, Y)
 Z[~mask] = np.nan  # mask out non-green area
 
 # Pin location
-pin_x, pin_y = -3.6, 177
-
+pin_x, pin_y =  5, 174
 # 3D Plot Surface
 fig = plt.figure(figsize=(10, 6))
 ax = fig.add_subplot(111, projection='3d')
