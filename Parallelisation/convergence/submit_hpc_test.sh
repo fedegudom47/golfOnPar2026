@@ -51,7 +51,7 @@ cd "${SCRIPT_DIR}"
 
 echo "=== TEST Task \${SLURM_ARRAY_TASK_ID} started at \$(date) ==="
 
-python run_hpc_worker.py \\
+python3 run_hpc_worker.py \\
     --seed \${SLURM_ARRAY_TASK_ID} \\
     --data-dir  "${DATA_DIR}" \\
     --output-dir "${OUTPUT_DIR}" \\
