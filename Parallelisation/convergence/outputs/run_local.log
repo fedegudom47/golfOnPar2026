@@ -12,3 +12,9 @@
 2026-04-02 07:45:18,870  INFO      [2/2] seed=1  EARLY  N=None  time=348.6s
 2026-04-02 07:45:18,902  INFO      Summary CSV → outputs/convergence_summary.csv
 2026-04-02 07:45:18,903  INFO      Full JSON → outputs/convergence_summary.json
+2026-04-02 08:57:31,995  INFO      MODE=test  seeds=2  early_stop_N=30  workers=2
+2026-04-02 08:57:31,995  INFO      Launching 2 worker(s) for 2 seeds ...
+2026-04-02 09:04:58,503  INFO      [1/2] seed=1  EARLY  N=None  time=444.0s
+2026-04-02 09:05:01,637  INFO      [2/2] seed=0  EARLY  N=None  time=447.1s
+2026-04-02 09:05:01,668  INFO      Summary CSV → outputs/convergence_summary.csv
+2026-04-02 09:05:01,669  INFO      Full JSON → outputs/convergence_summary.json

@@ -3,7 +3,7 @@
     "seed": 0,
     "convergence_N": null,
     "n_iterations": 2,
-    "wall_time_s": 339.4956033329945,
+    "wall_time_s": 447.10155187499913,
     "did_not_converge": false,
     "stopped_early": true
   },
@@ -11,7 +11,7 @@
     "seed": 1,
     "convergence_N": null,
     "n_iterations": 2,
-    "wall_time_s": 348.57868600000074,
+    "wall_time_s": 443.9663854579994,
     "did_not_converge": false,
     "stopped_early": true
   }

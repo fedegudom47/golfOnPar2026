@@ -18,8 +18,8 @@
 # =============================================================================
 
 # ---- USER CONFIGURATION (must match submit_hpc.sh) -------------------------
-REPO_ROOT="/path/to/golfOnPar"              # <-- CHANGE THIS
-CONDA_ENV="golf"
+REPO_ROOT="/home/fgdd2022/golfOnPar2026"              # <-- CHANGE THIS
+CONDA_ENV=""
 PARTITION="batch"
 # ACCOUNT="your_account"
 # ---- END USER CONFIGURATION -------------------------------------------------

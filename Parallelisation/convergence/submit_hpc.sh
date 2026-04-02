@@ -15,7 +15,7 @@
 
 # ---- USER CONFIGURATION -----------------------------------------------------
 # Absolute path to the repo root on the HPC cluster
-REPO_ROOT="/path/to/golfOnPar"              # <-- CHANGE THIS
+REPO_ROOT="/home/fgdd2022/golfOnPar2026"              # <-- CHANGE THIS
 
 # Number of seeds to run (array indices 0 … N_SEEDS-1)
 N_SEEDS=100
@@ -29,7 +29,7 @@ AIM_STEP=2.0
 GP_ITER=100
 
 # Slurm resource limits per task
-TIME_LIMIT="06:00:00"    # wall-clock time per seed (adjust if needed)
+TIME_LIMIT="23:00:00"    # wall-clock time per seed (adjust if needed)
 MEM_PER_CPU="8G"
 CPUS_PER_TASK=1
 
@@ -38,7 +38,7 @@ PARTITION="batch"
 # ACCOUNT="your_account"   # uncomment if your cluster requires --account
 
 # Name of the conda / venv environment that has gpytorch, geopandas, etc.
-CONDA_ENV="golf"           # or set to "" and use module + pip instead
+CONDA_ENV=""           # or set to "" and use module + pip instead
 # ---- END USER CONFIGURATION -------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -72,7 +72,7 @@ fi
 
 # Option B: module + venv (uncomment if using modules instead)
 # module load python/3.11
-# source /path/to/venv/bin/activate
+source /home/fgdd2022/golfOnPar2026/venv/bin/activate
 
 cd "${SCRIPT_DIR}"
 

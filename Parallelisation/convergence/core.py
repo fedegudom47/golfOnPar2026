@@ -546,20 +546,30 @@ def simulate_approach_shots(
 # ---------------------------------------------------------------------------
 
 CLUB_STYLES: dict[str, dict] = {
-    "Driver":  {"short": "D",   "color": "#000000"},
-    "3-wood":  {"short": "3w",  "color": "#FFAE00"},
-    "5-wood":  {"short": "5w",  "color": "#CC79A7"},
-    "Hybrid":  {"short": "Hy",  "color": "#009E73"},
-    "4 Iron":  {"short": "4i",  "color": "royalblue"},
-    "5 Iron":  {"short": "5i",  "color": "#56B4E9"},
-    "6 Iron":  {"short": "6i",  "color": "#4DAF4A"},
-    "7 Iron":  {"short": "7i",  "color": "#D55E00"},
-    "8 Iron":  {"short": "8i",  "color": "#984EA3"},
-    "9 Iron":  {"short": "9i",  "color": "#FFEE00"},
-    "PW":      {"short": "Pw",  "color": "#0C034F"},
-    "50 deg":  {"short": "50",  "color": "#E41A1C"},
-    "54 deg":  {"short": "54",  "color": "#999999"},
-    "60 deg":  {"short": "60",  "color": "#3E1F1F"},
+    # Woods / long clubs
+    "Driver":     {"short": "D",    "color": "#000000"},
+    "3-wood":     {"short": "3w",   "color": "#FFAE00"},
+    "5-wood":     {"short": "5w",   "color": "#CC79A7"},
+    "Hybrid":     {"short": "Hy",   "color": "#009E73"},
+    # Irons
+    "4 Iron":     {"short": "4i",   "color": "royalblue"},
+    "5 Iron":     {"short": "5i",   "color": "#56B4E9"},
+    "6 Iron":     {"short": "6i",   "color": "#4DAF4A"},
+    "7 Iron":     {"short": "7i",   "color": "#D55E00"},
+    "8 Iron":     {"short": "8i",   "color": "#984EA3"},
+    "9 Iron":     {"short": "9i",   "color": "#FFEE00"},
+    "PW":         {"short": "Pw",   "color": "#0C034F"},
+    # Wedges — full swings
+    "50 deg":     {"short": "50",   "color": "#E41A1C"},
+    "54 deg":     {"short": "54",   "color": "#999999"},
+    "60 deg":     {"short": "60",   "color": "#3E1F1F"},
+    # Wedges — partial swings (H = half, 3Q = three-quarter, 1Q = one-quarter, 1E = one-eighth)
+    "H 50 deg":   {"short": "H50",  "color": "#FF6B6B"},
+    "H 54 deg":   {"short": "H54",  "color": "#C0C0C0"},
+    "H 60 deg":   {"short": "H60",  "color": "#8B6565"},
+    "3Q 60 deg":  {"short": "3Q60", "color": "#A0522D"},
+    "1Q 60 deg":  {"short": "1Q60", "color": "#D2B48C"},
+    "1E 60 deg":  {"short": "1E60", "color": "#F5DEB3"},
 }
 
 _LIE_COLORS = {
