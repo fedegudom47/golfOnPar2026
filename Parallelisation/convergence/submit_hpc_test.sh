@@ -46,6 +46,7 @@ if [ -n "${CONDA_ENV}" ]; then
     source "\$(conda info --base)/etc/profile.d/conda.sh"
     conda activate "${CONDA_ENV}"
 fi
+source /home/fgdd2022/golfOnPar2026/venv/bin/activate
 
 cd "${SCRIPT_DIR}"
 
