@@ -13,67 +13,51 @@
 set -e   # exit on first error
 
 REPO_ROOT="/home/fgdd2022/golfOnPar2026"
-VENV_DIR="${REPO_ROOT}/venv"
+CONDA_DIR="${HOME}/miniconda3"
+CONDA_ENV_NAME="golf"
 
 echo "=== Golf convergence study — HPC environment setup ==="
-echo "Repo root : ${REPO_ROOT}"
-echo "Venv dir  : ${VENV_DIR}"
+echo "Repo root  : ${REPO_ROOT}"
+echo "Conda dir  : ${CONDA_DIR}"
+echo "Conda env  : ${CONDA_ENV_NAME}"
 echo ""
 
 # ---------------------------------------------------------------------------
-# 1. Load a Python 3.9+ module
-#    Run `module avail python` on the login node to see what is available,
-#    then update the module name below.
+# 1. Install Miniconda if not already present
 # ---------------------------------------------------------------------------
-echo "--- Loading Python module ---"
-
-# Try a few common module names; edit to match what `module avail python` shows
-PYTHON_MODULE=""
-for candidate in "python/3.11" "python/3.10" "python/3.9" "Python/3.11" "Python/3.10" "Python/3.9"; do
-    if module load "${candidate}" 2>/dev/null; then
-        PYTHON_MODULE="${candidate}"
-        echo "Loaded module: ${candidate}"
-        break
-    fi
-done
-
-if [ -z "${PYTHON_MODULE}" ]; then
-    echo ""
-    echo "WARNING: Could not auto-load a Python module."
-    echo "Run 'module avail python' and then 'module load <name>' manually,"
-    echo "then re-run this script."
-    echo ""
-    echo "Checking what python3 is currently in PATH..."
+if [ ! -f "${CONDA_DIR}/bin/conda" ]; then
+    echo "--- Downloading and installing Miniconda ---"
+    INSTALLER="${HOME}/miniconda_installer.sh"
+    curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o "${INSTALLER}"
+    bash "${INSTALLER}" -b -p "${CONDA_DIR}"
+    rm -f "${INSTALLER}"
+    echo "Miniconda installed at ${CONDA_DIR}"
+else
+    echo "Miniconda already installed at ${CONDA_DIR} — skipping download."
 fi
 
-PYTHON_BIN=$(which python3 2>/dev/null || which python 2>/dev/null)
-PYTHON_VER=$("${PYTHON_BIN}" -c "import sys; print(sys.version)" 2>/dev/null || echo "not found")
-echo "Using Python: ${PYTHON_BIN}"
-echo "Version     : ${PYTHON_VER}"
-
-# Verify Python 3.9+
-"${PYTHON_BIN}" -c "
-import sys
-if sys.version_info < (3, 9):
-    print(f'ERROR: Python 3.9+ required, got {sys.version}')
-    sys.exit(1)
-print('Python version OK.')
-"
+# Initialise conda for this shell session
+source "${CONDA_DIR}/etc/profile.d/conda.sh"
 
 # ---------------------------------------------------------------------------
-# 2. Create the virtual environment
+# 2. Create the conda environment with Python 3.11
 # ---------------------------------------------------------------------------
-echo ""
-echo "--- Creating venv at ${VENV_DIR} ---"
-"${PYTHON_BIN}" -m venv "${VENV_DIR}"
-source "${VENV_DIR}/bin/activate"
-echo "Venv activated: $(which python3)"
+if conda env list | grep -q "^${CONDA_ENV_NAME} "; then
+    echo "--- Conda env '${CONDA_ENV_NAME}' already exists — skipping creation. ---"
+    echo "    (To recreate: conda env remove -n ${CONDA_ENV_NAME})"
+else
+    echo "--- Creating conda env '${CONDA_ENV_NAME}' with Python 3.11 ---"
+    conda create -y -n "${CONDA_ENV_NAME}" python=3.11
+fi
+
+conda activate "${CONDA_ENV_NAME}"
+echo "Active env : $(which python3)  $(python3 --version)"
 
 # ---------------------------------------------------------------------------
 # 3. Install dependencies
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- Installing pip dependencies ---"
+echo "--- Installing dependencies into conda env '${CONDA_ENV_NAME}' ---"
 pip install --upgrade pip
 
 pip install \
@@ -122,6 +106,10 @@ print('  run_hpc_worker.py imports OK')
 
 echo ""
 echo "=== Setup complete! ==="
+echo ""
+echo "IMPORTANT — the submit scripts activate via conda, not the old venv."
+echo "They already use the correct activation line below; just make sure"
+echo "CONDA_DIR matches where Miniconda was installed (${CONDA_DIR})."
 echo ""
 echo "Next steps:"
 echo "  1. Run the HPC test job (4 seeds, early stop):"

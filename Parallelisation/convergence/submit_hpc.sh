@@ -37,8 +37,6 @@ CPUS_PER_TASK=1
 PARTITION="batch"
 # ACCOUNT="your_account"   # uncomment if your cluster requires --account
 
-# Name of the conda / venv environment that has gpytorch, geopandas, etc.
-CONDA_ENV=""           # or set to "" and use module + pip instead
 # ---- END USER CONFIGURATION -------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -64,19 +62,9 @@ sbatch <<EOF
 # #SBATCH --account=${ACCOUNT}
 
 # --- Environment setup -------------------------------------------------------
-# Load a Python 3.9+ module BEFORE activating the venv.
-# Run 'module avail python' on a login node to find the right name,
-# then update the line below.
-module load python/3.11 2>/dev/null || module load python/3.10 2>/dev/null || module load python/3.9 2>/dev/null || true
-
-# Option A: conda environment
-if [ -n "${CONDA_ENV}" ]; then
-    source "\$(conda info --base)/etc/profile.d/conda.sh"
-    conda activate "${CONDA_ENV}"
-fi
-
-# Option B: venv (created by setup_hpc_env.sh)
-source /home/fgdd2022/golfOnPar2026/venv/bin/activate
+# Activate the conda environment created by setup_hpc_env.sh
+source "\${HOME}/miniconda3/etc/profile.d/conda.sh"
+conda activate golf
 
 # Verify Python version before doing any real work
 python3 -c "import sys; sys.exit(0) if sys.version_info >= (3,9) else sys.exit(f'ERROR: Python {sys.version} too old — need 3.9+')" || exit 1
