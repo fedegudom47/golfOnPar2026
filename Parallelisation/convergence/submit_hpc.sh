@@ -29,12 +29,12 @@ AIM_STEP=2.0
 GP_ITER=100
 
 # Slurm resource limits per task
-TIME_LIMIT="23:00:00"    # wall-clock time per seed (adjust if needed)
+TIME_LIMIT="120:00:00"    # wall-clock time per seed (adjust if needed)
 MEM_PER_CPU="8G"
 CPUS_PER_TASK=1
 
 # Partition / account (update to match your cluster)
-PARTITION="batch"
+PARTITION="amd"
 # ACCOUNT="your_account"   # uncomment if your cluster requires --account
 
 # ---- END USER CONFIGURATION -------------------------------------------------
