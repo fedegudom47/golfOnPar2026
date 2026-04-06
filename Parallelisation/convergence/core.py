@@ -446,22 +446,44 @@ def rotation_translator(
 # Core approach-shot simulation
 # ---------------------------------------------------------------------------
 
+# Type alias for the strokes accumulator passed between iterations.
+# Maps (start_x, start_y, club, aim_offset) → np.ndarray of stroke values
+# collected so far (excluding the per-shot lie penalty, which is added at
+# mean-computation time so the raw draws stay reusable).
+StrokesAccumulator = dict  # (tuple[float, float, str, float]) → np.ndarray
+
+
 def simulate_approach_shots(
     hole: HoleData,
-    n_samples: int,
+    n_new: int,
+    accumulator: Optional[StrokesAccumulator] = None,
     strategy_points: Optional[list] = None,
     aim_range: tuple[float, float] = (-20.0, 20.0),
     aim_step: float = 2.0,
-) -> list[dict]:
-    """Simulate approach shots for every strategy point with `n_samples` draws.
+) -> tuple[list[dict], StrokesAccumulator]:
+    """Simulate `n_new` additional shots per (grid-point, club, aim) combo.
 
-    Returns a list of dicts:
-        {start, club, aim_offset, mean, var}
+    Shots accumulate across calls via `accumulator`.  On the first call pass
+    ``accumulator=None``; on subsequent calls pass the dict returned by the
+    previous call.  Only `n_new` shots are drawn each time — prior draws are
+    reused, so the total sample size grows by `n_new` each iteration rather
+    than being restarted from scratch.
 
-    `mean` already includes the +1 stroke overhead (or +2 for water lies).
+    Returns
+    -------
+    optimal_results : list[dict]
+        One entry per grid point with keys:
+        {start, club, aim_offset, mean, var, n_total}
+        `mean` includes the lie-penalty stroke (+1 fairway/rough, +2 water).
+        `n_total` is the accumulated shot count for the winning (club, aim).
+    new_accumulator : StrokesAccumulator
+        Updated dict to pass into the next call.
     """
     if strategy_points is None:
         strategy_points = hole.strategy_points
+
+    if accumulator is None:
+        accumulator = {}
 
     target = hole.hole
     aim_points = list(np.arange(aim_range[0], aim_range[1] + aim_step, aim_step))
@@ -471,6 +493,7 @@ def simulate_approach_shots(
         for club, stats in hole.club_distributions.items()
     }
 
+    new_accumulator: StrokesAccumulator = {}
     optimal_results: list[dict] = []
 
     for starting_point in strategy_points:
@@ -507,24 +530,31 @@ def simulate_approach_shots(
                 cov = hole.club_distributions[club]["cov"]
 
             for aim_offset in aim_points:
+                key = (starting_point[0], starting_point[1], club, aim_offset)
                 angle_deg = float(np.degrees(np.arctan(aim_offset / total_distance))) if total_distance > 0 else 0.0
-                samples = np.random.multivariate_normal(mu, cov, size=n_samples)
 
-                strokes: list[float] = []
-                for shot in samples:
+                # --- Simulate only the NEW shots ---
+                new_samples = np.random.multivariate_normal(mu, cov, size=n_new)
+                new_strokes: list[float] = []
+                for shot in new_samples:
                     lp = rotation_translator(
                         float(shot[0]), float(shot[1]),
                         angle_deg, playing_location, target,
                     )
                     es = evaluate_shot(lp, playing_location, target, hole)
                     if not np.isnan(es):
-                        strokes.append(es)
+                        new_strokes.append(es)
 
-                if not strokes:
+                # --- Merge with accumulated shots from prior iterations ---
+                prior = accumulator.get(key, np.array([], dtype=np.float32))
+                combined = np.concatenate([prior, np.array(new_strokes, dtype=np.float32)])
+                new_accumulator[key] = combined
+
+                if len(combined) == 0:
                     continue
 
-                mean_val = float(np.mean(strokes)) + penalty
-                var_val = float(np.var(strokes))
+                mean_val = float(np.mean(combined)) + penalty
+                var_val  = float(np.var(combined))
 
                 if best_res is None or mean_val < best_res["mean"]:
                     best_res = {
@@ -533,12 +563,13 @@ def simulate_approach_shots(
                         "aim_offset": float(aim_offset),
                         "mean":       mean_val,
                         "var":        var_val,
+                        "n_total":    int(len(combined)),
                     }
 
         if best_res is not None:
             optimal_results.append(best_res)
 
-    return optimal_results
+    return optimal_results, new_accumulator
 
 
 # ---------------------------------------------------------------------------
@@ -642,8 +673,9 @@ def results_to_dataframe(
         aim_offset    – optimal aim offset (yards, +right / -left)
         esho_mean     – expected strokes to hole out (includes lie penalty)
         esho_var      – variance of the shot-stroke distribution
+        n_total       – accumulated shot count for the winning (club, aim)
         seed          – random seed for this worker
-        N             – number of shots used in this iteration
+        N             – iteration step label (n_new shots added this round)
     """
     rows = []
     for r in optimal_results:
@@ -654,6 +686,7 @@ def results_to_dataframe(
             "aim_offset": float(r["aim_offset"]),
             "esho_mean":  float(r["mean"]),
             "esho_var":   float(r["var"]),
+            "n_total":    int(r.get("n_total", N)),
             "seed":       seed,
             "N":          N,
         })

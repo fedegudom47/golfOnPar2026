@@ -217,8 +217,9 @@ def run_convergence(
 
     history: deque[dict] = deque(maxlen=config.k)
     prev_results: Optional[list[dict]] = None  # for match rate computation
+    accumulator: Optional[dict] = None          # accumulated shot strokes across iterations
 
-    N = config.n_start
+    N = config.n_start   # total shots accumulated so far (for logging / CSV label)
     n_iterations = 0
     did_not_converge = False
     stopped_early = False
@@ -226,12 +227,15 @@ def run_convergence(
 
     while True:
         iter_t0 = time.monotonic()
-        logger.info("--- Iteration %d  N=%d ---", n_iterations, N)
+        # On the first iteration simulate n_start shots; thereafter add n_step.
+        n_new = config.n_start if n_iterations == 0 else config.n_step
+        logger.info("--- Iteration %d  N_total=%d  (+%d new shots) ---", n_iterations, N, n_new)
 
-        # Simulate approach shots with N samples per grid point
-        optimal_results = simulate_approach_shots(
+        # Simulate ONLY the new shots; merge with accumulator internally
+        optimal_results, accumulator = simulate_approach_shots(
             hole=hole,
-            n_samples=N,
+            n_new=n_new,
+            accumulator=accumulator,
             aim_range=config.aim_range,
             aim_step=config.aim_step,
         )
@@ -287,7 +291,7 @@ def run_convergence(
             did_not_converge = True
             break
 
-        N += config.n_step
+        N += config.n_step   # track total accumulated shots for logging
         n_iterations += 1
 
     wall_time = time.monotonic() - t0
