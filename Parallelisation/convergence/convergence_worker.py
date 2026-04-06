@@ -21,7 +21,7 @@ import argparse
 import json
 import logging
 import time
-from collections import deque
+from collections import Counter, deque
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
@@ -29,7 +29,7 @@ from typing import Optional
 import numpy as np
 
 # Local import – workers are run from inside the convergence/ directory
-from core import HoleData, build_hole, plot_optimal_approaches, simulate_approach_shots
+from core import HoleData, build_hole, plot_optimal_approaches, results_to_dataframe, simulate_approach_shots
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,9 @@ class ConvergenceResult:
 # Helpers
 # ---------------------------------------------------------------------------
 
+AIM_TOLERANCE: float = 1.0  # yards — two aim offsets are "equal" within this
+
+
 def _opt_key(result: dict) -> tuple[str, int]:
     """Hashable key for one grid-point's optimal decision."""
     return (result["club"], int(round(result["aim_offset"])))
@@ -88,6 +91,63 @@ def _snapshots_agree(history: deque) -> bool:
     return True
 
 
+def _compute_match_rate(
+    current: list[dict],
+    previous: list[dict],
+    aim_tolerance: float = AIM_TOLERANCE,
+) -> float:
+    """Fraction of grid points where club is identical AND aim is within tolerance.
+
+    Points present in one snapshot but not the other count as non-matches.
+    Returns a value in [0, 1].
+    """
+    prev_map = {r["start"]: r for r in previous}
+    all_points = {r["start"] for r in current} | set(prev_map.keys())
+    if not all_points:
+        return 1.0
+
+    matches = 0
+    for r in current:
+        p = prev_map.get(r["start"])
+        if p is None:
+            continue
+        if r["club"] == p["club"] and abs(r["aim_offset"] - p["aim_offset"]) <= aim_tolerance:
+            matches += 1
+
+    return matches / len(all_points)
+
+
+def _save_csv(
+    seed: int,
+    N: int,
+    optimal_results: list[dict],
+    output_dir: Path,
+    converged: bool = False,
+) -> None:
+    """Save per-iteration results as a CSV alongside the PNG."""
+    tag = "CONVERGED" if converged else f"N{N:04d}"
+    path = output_dir / f"seed{seed:04d}_{tag}.csv"
+    df = results_to_dataframe(optimal_results, seed=seed, N=N)
+    df.to_csv(path, index=False)
+    logger.info("Saved CSV → %s", path)
+
+
+def _append_match_log(
+    seed: int,
+    N: int,
+    match_rate: Optional[float],
+    output_dir: Path,
+) -> None:
+    """Append one line to the per-seed match-rate log (TSV)."""
+    log_path = output_dir / f"seed{seed:04d}_match_rate.tsv"
+    header_needed = not log_path.exists()
+    with open(log_path, "a") as f:
+        if header_needed:
+            f.write("N\tmatch_rate_pct\n")
+        rate_str = f"{match_rate * 100:.2f}" if match_rate is not None else "N/A"
+        f.write(f"{N}\t{rate_str}\n")
+
+
 def _save_snapshot_plot(
     seed: int,
     N: int,
@@ -95,6 +155,7 @@ def _save_snapshot_plot(
     hole: HoleData,
     output_dir: Path,
     converged: bool = False,
+    match_rate: Optional[float] = None,
 ) -> None:
     tag = "CONVERGED" if converged else f"N{N:04d}"
     fname = output_dir / f"seed{seed:04d}_{tag}.png"
@@ -104,6 +165,7 @@ def _save_snapshot_plot(
         hole,
         title=f"Seed {seed} | {status}",
         output_path=fname,
+        match_rate=match_rate,
     )
 
 
@@ -154,6 +216,7 @@ def run_convergence(
     logger.info("Hole ready. %d strategy points.", len(hole.strategy_points))
 
     history: deque[dict] = deque(maxlen=config.k)
+    prev_results: Optional[list[dict]] = None  # for match rate computation
 
     N = config.n_start
     n_iterations = 0
@@ -179,22 +242,29 @@ def run_convergence(
             time.monotonic() - iter_t0,
         )
 
-        # Save snapshot image
-        _save_snapshot_plot(seed, N, optimal_results, hole, seed_dir)
+        # Compute match rate against previous iteration
+        match_rate: Optional[float] = None
+        if prev_results is not None:
+            match_rate = _compute_match_rate(optimal_results, prev_results)
+            logger.info("  Match rate vs N=%d: %.1f%%", N - config.n_step, match_rate * 100)
 
-        # Log a brief summary of strategy distribution
-        from collections import Counter
+        # Log club distribution
         club_counts = Counter(r["club"] for r in optimal_results)
         logger.info("  Club distribution: %s", dict(club_counts.most_common()))
+
+        # Save per-iteration CSV and PNG (normal, non-converged)
+        _save_csv(seed, N, optimal_results, seed_dir)
+        _append_match_log(seed, N, match_rate, seed_dir)
+        _save_snapshot_plot(seed, N, optimal_results, hole, seed_dir, match_rate=match_rate)
 
         # Store snapshot in rolling history
         snap = _build_snapshot(optimal_results)
         history.append(snap)
+        prev_results = optimal_results
 
         # Check for early stop (test mode)
         if config.early_stop_N is not None and N >= config.early_stop_N:
             logger.info("Early stop triggered at N=%d (limit=%d).", N, config.early_stop_N)
-            _save_snapshot_plot(seed, N, optimal_results, hole, seed_dir, converged=False)
             stopped_early = True
             break
 
@@ -205,7 +275,10 @@ def run_convergence(
                 "CONVERGED at N=%d after %d iterations  (%.1fs total).",
                 N, n_iterations, time.monotonic() - t0,
             )
-            _save_snapshot_plot(seed, N, optimal_results, hole, seed_dir, converged=True)
+            # Overwrite the final PNG with a CONVERGED-tagged copy
+            _save_snapshot_plot(seed, N, optimal_results, hole, seed_dir,
+                                 converged=True, match_rate=match_rate)
+            _save_csv(seed, N, optimal_results, seed_dir, converged=True)
             break
 
         # Check whether we have exhausted our budget

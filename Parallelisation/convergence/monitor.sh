@@ -124,27 +124,51 @@ PYEOF
 fi
 
 # ---------------------------------------------------------------------------
-# Snapshot image counts per seed
+# Per-seed status table: PNGs, convergence, latest match rate
 # ---------------------------------------------------------------------------
 echo ""
-echo -e "${BOLD}  Snapshot images per seed:${RESET}"
+echo -e "${BOLD}  Per-seed status:${RESET}"
+printf "  %-14s  %-6s  %-12s  %-10s  %s\n" "Seed" "PNGs" "Status" "Conv N" "Match rate history (N: rate%)"
+printf "  %-14s  %-6s  %-12s  %-10s  %s\n" "----" "----" "------" "------" "-----------------------------"
+
 for sdir in "${OUTPUT_DIR}"/seed*; do
     [ -d "$sdir" ] || continue
     seed_name=$(basename "$sdir")
     n_png=$(ls "${sdir}"/*.png 2>/dev/null | wc -l | tr -d ' ')
     result_json="${sdir}/${seed_name}_result.json"
+    match_tsv="${sdir}/${seed_name}_match_rate.tsv"
+
+    # Status + convergence N
     if [ -f "${result_json}" ]; then
-        summary=$(python3 -c "
+        status_conv=$(python3 -c "
 import json
 d = json.load(open('${result_json}'))
-n = d.get('convergence_N', 'None')
+n = d.get('convergence_N', None)
 s = 'CONVERGED' if n is not None else ('EARLY' if d.get('stopped_early') else 'NOT CONV')
-print(f'{s:10s} N={n}')
+print(f'{s}|{n}')
 " 2>/dev/null)
-        echo "    ${seed_name}: ${n_png} PNGs  |  ${summary}"
+        status="${status_conv%%|*}"
+        conv_n="${status_conv##*|}"
+        [ "${conv_n}" = "None" ] && conv_n="-"
     else
-        echo "    ${seed_name}: ${n_png} PNGs  |  (still running or no result yet)"
+        status="running"
+        conv_n="-"
     fi
+
+    # Match rate history from TSV
+    if [ -f "${match_tsv}" ]; then
+        match_history=$(python3 -c "
+import csv
+rows = list(csv.DictReader(open('${match_tsv}'), delimiter='\t'))
+parts = [f\"N={r['N']}:{r['match_rate_pct']}%\" for r in rows if r.get('match_rate_pct','N/A') != 'N/A']
+print('  '.join(parts) if parts else 'no comparisons yet')
+" 2>/dev/null || echo "n/a")
+    else
+        match_history="no data yet"
+    fi
+
+    printf "  %-14s  %-6s  %-12s  %-10s  %s\n" \
+        "${seed_name}" "${n_png}" "${status}" "${conv_n}" "${match_history}"
 done
 
 # ---------------------------------------------------------------------------

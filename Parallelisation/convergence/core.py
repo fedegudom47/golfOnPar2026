@@ -629,15 +629,55 @@ def plot_hole_layout(
     return ax
 
 
+def results_to_dataframe(
+    optimal_results: list[dict],
+    seed: int,
+    N: int,
+) -> "pd.DataFrame":
+    """Convert simulate_approach_shots output to a tidy DataFrame.
+
+    Columns:
+        x, y          – grid-point coordinates (yards)
+        club          – optimal club name
+        aim_offset    – optimal aim offset (yards, +right / -left)
+        esho_mean     – expected strokes to hole out (includes lie penalty)
+        esho_var      – variance of the shot-stroke distribution
+        seed          – random seed for this worker
+        N             – number of shots used in this iteration
+    """
+    rows = []
+    for r in optimal_results:
+        rows.append({
+            "x":          float(r["start"][0]),
+            "y":          float(r["start"][1]),
+            "club":       r["club"],
+            "aim_offset": float(r["aim_offset"]),
+            "esho_mean":  float(r["mean"]),
+            "esho_var":   float(r["var"]),
+            "seed":       seed,
+            "N":          N,
+        })
+    return pd.DataFrame(rows)
+
+
 def plot_optimal_approaches(
     optimal_results: list[dict],
     hole: HoleData,
     title: str = "Optimal Approach Strategy",
     figsize: tuple = (14, 16),
     output_path: Optional[Path] = None,
+    match_rate: Optional[float] = None,
 ) -> None:
-    """Scatter the optimal strategy grid coloured by ESHO and club."""
+    """Scatter the optimal strategy grid coloured by ESHO and club.
+
+    match_rate: fraction in [0, 1] of grid points that agree with the
+                previous iteration (club identical + aim within tolerance).
+                Shown in the plot title when provided.
+    """
     import matplotlib as mpl
+
+    if match_rate is not None:
+        title = f"{title}  |  Match rate vs prev: {match_rate * 100:.1f}%"
 
     fig, ax = plt.subplots(figsize=figsize)
     plot_hole_layout(hole, title=title, plot_strategy_points=False, ax=ax)
