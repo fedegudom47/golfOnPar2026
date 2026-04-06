@@ -12,7 +12,7 @@
 
 set -e   # exit on first error
 
-REPO_ROOT="/home/fgdd2022/golfOnPar2026"
+REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"
 CONDA_DIR="${HOME}/miniconda3"
 CONDA_ENV_NAME="golf"
 

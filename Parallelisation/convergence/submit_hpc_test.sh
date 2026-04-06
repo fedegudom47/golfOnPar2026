@@ -18,7 +18,7 @@
 # =============================================================================
 
 # ---- USER CONFIGURATION (must match submit_hpc.sh) -------------------------
-REPO_ROOT="/home/fgdd2022/golfOnPar2026"
+REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"
 PARTITION="short"
 # ACCOUNT="your_account"
 # ---- END USER CONFIGURATION -------------------------------------------------

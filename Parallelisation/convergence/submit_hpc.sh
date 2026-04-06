@@ -15,7 +15,7 @@
 
 # ---- USER CONFIGURATION -----------------------------------------------------
 # Absolute path to the repo root on the HPC cluster
-REPO_ROOT="/home/fgdd2022/golfOnPar2026"              # <-- CHANGE THIS
+REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"              # <-- CHANGE THIS
 
 # Number of seeds to run (array indices 0 … N_SEEDS-1)
 N_SEEDS=100
