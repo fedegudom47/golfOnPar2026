@@ -1,11 +1,11 @@
-# Python version guard — must be BEFORE any other import so the error is readable
-# even when the wrong Python is loaded on the HPC.
+from __future__ import annotations
+
+# Python version guard — gives a clear error before any other import runs.
 import sys as _sys
 if _sys.version_info < (3, 9):
     _sys.exit(
         f"ERROR: Python 3.9+ required, but running {_sys.version}.\n"
-        "Make sure your venv is activated and was created with Python 3.9+.\n"
-        "See setup_hpc_env.sh for instructions."
+        "Make sure the conda 'golf' env is activated (see setup_hpc_env.sh)."
     )
 
 """
@@ -29,8 +29,6 @@ Example HPC test (called by submit_hpc_test.sh):
         --output-dir /path/to/repo/Parallelisation/convergence/outputs_test \\
         --n-max 300 --early-stop-N 30
 """
-
-from __future__ import annotations
 
 import argparse
 import json
