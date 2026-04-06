@@ -64,15 +64,22 @@ sbatch <<EOF
 # #SBATCH --account=${ACCOUNT}
 
 # --- Environment setup -------------------------------------------------------
+# Load a Python 3.9+ module BEFORE activating the venv.
+# Run 'module avail python' on a login node to find the right name,
+# then update the line below.
+module load python/3.11 2>/dev/null || module load python/3.10 2>/dev/null || module load python/3.9 2>/dev/null || true
+
 # Option A: conda environment
 if [ -n "${CONDA_ENV}" ]; then
     source "\$(conda info --base)/etc/profile.d/conda.sh"
     conda activate "${CONDA_ENV}"
 fi
 
-# Option B: module + venv (uncomment if using modules instead)
-# module load python/3.11
+# Option B: venv (created by setup_hpc_env.sh)
 source /home/fgdd2022/golfOnPar2026/venv/bin/activate
+
+# Verify Python version before doing any real work
+python3 -c "import sys; sys.exit(0) if sys.version_info >= (3,9) else sys.exit(f'ERROR: Python {sys.version} too old — need 3.9+')" || exit 1
 
 cd "${SCRIPT_DIR}"
 

@@ -1,3 +1,13 @@
+# Python version guard — must be BEFORE any other import so the error is readable
+# even when the wrong Python is loaded on the HPC.
+import sys as _sys
+if _sys.version_info < (3, 9):
+    _sys.exit(
+        f"ERROR: Python 3.9+ required, but running {_sys.version}.\n"
+        "Make sure your venv is activated and was created with Python 3.9+.\n"
+        "See setup_hpc_env.sh for instructions."
+    )
+
 """
 run_hpc_worker.py – Single-seed entry point for a Slurm array job.
 

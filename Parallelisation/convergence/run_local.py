@@ -27,7 +27,6 @@ import sys
 from dataclasses import asdict
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Optional
 
 # Workers run inside the convergence/ directory
 sys.path.insert(0, str(Path(__file__).parent))

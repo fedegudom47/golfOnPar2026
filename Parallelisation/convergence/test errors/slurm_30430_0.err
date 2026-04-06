@@ -1,0 +1,5 @@
+/var/spool/slurm/d/job30431/slurm_script: line 16: /home/fgdd2022/golfOnPar2026/venv/bin/activate: No such file or directory
+  File "run_hpc_worker.py", line 23
+    from __future__ import annotations
+    ^
+SyntaxError: future feature annotations is not defined
