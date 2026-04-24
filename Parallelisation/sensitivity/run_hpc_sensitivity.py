@@ -377,7 +377,8 @@ def main() -> None:
     logger.info("Hole ready. %d strategy points.", len(hole.strategy_points))
 
     # ── 2. Approach simulation ─────────────────────────────────────────────
-    logger.info("Simulating approach shots (N=%d per combo) ...", N)
+    logger.info("Starting simulate_approach_shots (N=%d, aim_range=%s, aim_step=%.1f) ...",
+                N, args.aim_range, args.aim_step)
     np.random.seed(task_id)
     optimal_results, _ = simulate_approach_shots(
         hole=hole,
@@ -463,4 +464,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import traceback as _tb
+    try:
+        main()
+    except Exception:
+        _tb.print_exc()
+        _sys.exit(1)
