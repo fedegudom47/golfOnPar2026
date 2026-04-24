@@ -1,0 +1,14 @@
+{
+  "n_tee_shots": 5,
+  "top_club": "3-wood",
+  "club_distribution": {
+    "3-wood": 5
+  },
+  "landing_mean_x": 10.642309088048084,
+  "landing_mean_y": 165.80121366354794,
+  "landing_std_x": 13.160695316746876,
+  "landing_std_y": 5.0939736546515535,
+  "landing_lie_distribution": {
+    "fairway": 5
+  }
+}

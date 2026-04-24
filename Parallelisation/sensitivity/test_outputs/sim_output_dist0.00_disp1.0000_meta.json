@@ -1,0 +1,9 @@
+{
+  "task_id": 0,
+  "carry_shift": 0.0,
+  "variance_scale": 1.0,
+  "n_sims": 5,
+  "n_shots_total": 24,
+  "mean_strokes": 4.8,
+  "tee_top_club": "3-wood"
+}

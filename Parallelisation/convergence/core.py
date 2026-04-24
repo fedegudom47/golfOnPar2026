@@ -97,8 +97,20 @@ class HoleData:
 _DEFAULT_DATA_DIR = Path(__file__).parent.parent / "data"
 
 
-def build_hole(data_dir: Optional[Path] = None, gp_training_iter: int = 100) -> HoleData:
+def build_hole(
+    data_dir: Optional[Path] = None,
+    gp_training_iter: int = 100,
+    carry_shift_yards: float = 0.0,
+    variance_scale: float = 1.0,
+) -> HoleData:
     """Load data and set up the full Par-4 hole layout.
+
+    Parameters
+    ----------
+    carry_shift_yards : float
+        Yards added to the mean carry of every club (positive = farther).
+    variance_scale : float
+        Multiplier applied to every club's covariance matrix.
 
     Returns a HoleData that is fully self-contained and ready for simulation.
     """
@@ -244,10 +256,17 @@ def build_hole(data_dir: Optional[Path] = None, gp_training_iter: int = 100) -> 
     lpga_clubs = pd.read_csv(data_dir / "simulated_lpga_shot_data2.csv")
     club_distributions: dict = {}
     for club, group in lpga_clubs.groupby("Club"):
-        club_distributions[club] = {
-            "mean": group[["Side", "Carry"]].mean().to_numpy(),
-            "cov":  np.cov(group[["Side", "Carry"]].T),
-        }
+        mu  = group[["Side", "Carry"]].mean().to_numpy()
+        cov = np.cov(group[["Side", "Carry"]].T)
+        # Fix Side-Carry correlation: positive Side maps to a LEFT deviation in
+        # global coordinates (rotation_translator negates x_side for a northward
+        # hole).  The raw data was generated with the wrong correlation sign, so
+        # we negate the off-diagonal so left misses go farther, right misses shorter.
+        cov[0, 1] = abs(cov[0, 1])
+        cov[1, 0] = abs(cov[1, 0])
+        mu[1]  += carry_shift_yards
+        cov    *= variance_scale
+        club_distributions[club] = {"mean": mu, "cov": cov}
 
     # Rough distributions: shorter carry + larger variance, scaled by club length
     club_names_sorted = sorted(
@@ -511,10 +530,11 @@ def simulate_approach_shots(
             np.array(target) - np.array(playing_location)
         ))
 
-        # Top-5 clubs by carry proximity to remaining distance
+        # Top-5 clubs by carry proximity; Driver excluded — approach shots only
         top_clubs = [
             club for club, _ in sorted(
-                ((c, abs(carry - total_distance)) for c, carry in clubs_avg_carry.items()),
+                ((c, abs(carry - total_distance)) for c, carry in clubs_avg_carry.items()
+                 if c != "Driver"),
                 key=lambda x: x[1],
             )[:5]
         ]
