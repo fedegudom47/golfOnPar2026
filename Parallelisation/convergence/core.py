@@ -256,7 +256,7 @@ def build_hole(
     lpga_clubs = pd.read_csv(data_dir / "simulated_lpga_shot_data2.csv")
     club_distributions: dict = {}
     for club, group in lpga_clubs.groupby("Club"):
-        mu  = group[["Side", "Carry"]].mean().to_numpy()
+        mu  = group[["Side", "Carry"]].mean().to_numpy().copy()
         cov = np.cov(group[["Side", "Carry"]].T)
         # Fix Side-Carry correlation: positive Side maps to a LEFT deviation in
         # global coordinates (rotation_translator negates x_side for a northward
