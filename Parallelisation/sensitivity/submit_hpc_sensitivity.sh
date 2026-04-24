@@ -15,7 +15,7 @@
 # ---- USER CONFIGURATION -----------------------------------------------------
 REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"
 
-N_SHOTS=280            # approach shots per (grid-point, club, aim) — matches convergence
+N_SHOTS=300            # approach shots per (grid-point, club, aim)
 GP_ITER=100            # GPR training iterations (putting + approach GPR)
 TEE_SAMPLES=50         # samples per (club, aim) for tee shot evaluation
 

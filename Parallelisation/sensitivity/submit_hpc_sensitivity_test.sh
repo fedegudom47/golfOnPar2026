@@ -21,15 +21,15 @@ CONFIGS_CSV="${SCRIPT_DIR}/param_configs.csv"
 OUTPUT_DIR="${SCRIPT_DIR}/test_outputs"
 LOG_DIR="${OUTPUT_DIR}/logs"
 
-N_SHOTS=10           # keep tiny for a quick smoke test
-GP_ITER=50           # fast GPR for the test
-TEE_SAMPLES=10
-TEST_TASK_ID=0       # use the first (baseline) config
+N_SHOTS=300          # full shot count — same as production
+GP_ITER=100          # full GPR iterations
+TEE_SAMPLES=50
+TEST_TASK_IDS="0-2"  # 3 tasks in parallel: baseline + 2 variants
 
-TIME_LIMIT="00:15:00"
+TIME_LIMIT="04:00:00"
 MEM_PER_CPU="8G"
 CPUS_PER_TASK=1
-PARTITION="short"    # or "amd" if short is not available
+PARTITION="amd"
 
 if [[ ! -f "${CONFIGS_CSV}" ]]; then
     echo "ERROR: param_configs.csv not found. Run: python config_matrix.py"
@@ -40,8 +40,8 @@ mkdir -p "${LOG_DIR}"
 
 echo "============================================================"
 echo "  Sensitivity SMOKE TEST"
-echo "  task_id : ${TEST_TASK_ID}  (baseline config)"
-echo "  n_sims  : ${N_SIMS}"
+echo "  tasks   : ${TEST_TASK_IDS}  (3 configs in parallel)"
+echo "  n_shots : ${N_SHOTS}"
 echo "  gp_iter : ${GP_ITER}"
 echo "  output  : ${OUTPUT_DIR}"
 echo "============================================================"
@@ -50,7 +50,7 @@ echo ""
 sbatch <<EOF
 #!/usr/bin/env bash
 #SBATCH --job-name=golf_sens_test
-#SBATCH --array=${TEST_TASK_ID}
+#SBATCH --array=${TEST_TASK_IDS}
 #SBATCH --cpus-per-task=${CPUS_PER_TASK}
 #SBATCH --mem=${MEM_PER_CPU}
 #SBATCH --time=${TIME_LIMIT}
@@ -104,9 +104,9 @@ fi
 EOF
 
 echo ""
-echo "Submitted test job (task ${TEST_TASK_ID})"
+echo "Submitted parallel test (tasks ${TEST_TASK_IDS})"
 echo "Monitor : squeue -u \$USER"
-echo "Logs    : ${LOG_DIR}/slurm_<JOB>_${TEST_TASK_ID}.out"
+echo "Logs    : ${LOG_DIR}/slurm_<JOB>_[0-2].out"
 echo ""
 echo "After completion, validate the output:"
 echo "  python validate_sensitivity_output.py --output-dir ${OUTPUT_DIR}"
