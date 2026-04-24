@@ -1,0 +1,403 @@
+2026-04-05 19:38:54,080  INFO      HPC worker started.  SLURM_JOB_ID=30464  SLURM_ARRAY_TASK_ID=1  seed=1
+2026-04-05 19:38:54,082  INFO      === Seed 1  START ===
+2026-04-05 19:38:54,082  INFO      === Seed 1  START ===
+2026-04-05 19:38:54,083  INFO      Config: WorkerConfig(n_start=10, n_step=10, n_max=300, k=3, aim_range=(-20.0, 20.0), aim_step=2.0, gp_training_iter=100, early_stop_N=None)
+2026-04-05 19:38:54,083  INFO      Config: WorkerConfig(n_start=10, n_step=10, n_max=300, k=3, aim_range=(-20.0, 20.0), aim_step=2.0, gp_training_iter=100, early_stop_N=None)
+2026-04-05 19:38:54,084  INFO      Building hole geometry and training putt GPR...
+2026-04-05 19:38:54,084  INFO      Building hole geometry and training putt GPR...
+2026-04-05 19:38:54,084  INFO      Building hole from data_dir=/bigdata/rhome/fgdd2022/golfOnPar2026/Parallelisation/data
+2026-04-05 19:38:54,190  INFO      Strategy grid: 280 points (ht_length=334.0)
+2026-04-05 19:38:57,349  INFO      Putt GPR trained (100 iterations).
+2026-04-05 19:38:57,350  INFO      Hole ready. 280 strategy points.
+2026-04-05 19:38:57,350  INFO      Hole ready. 280 strategy points.
+2026-04-05 19:38:57,350  INFO      --- Iteration 0  N=10 ---
+2026-04-05 19:38:57,350  INFO      --- Iteration 0  N=10 ---
+2026-04-05 19:40:40,982  INFO      Iteration 0  N=10: 280/280 grid points returned valid results  (103.6s)
+2026-04-05 19:40:40,982  INFO      Iteration 0  N=10: 280/280 grid points returned valid results  (103.6s)
+2026-04-05 19:40:40,984  INFO        Club distribution: {'Driver': 51, 'Hybrid': 36, '3-wood': 31, '4 Iron': 18, '7 Iron': 15, '50 deg': 15, '5-wood': 14, '9 Iron': 14, '5 Iron': 13, '6 Iron': 12, 'H 50 deg': 12, '60 deg': 11, '54 deg': 10, '8 Iron': 9, 'H 54 deg': 8, 'PW': 6, '3Q 60 deg': 5}
+2026-04-05 19:40:40,984  INFO        Club distribution: {'Driver': 51, 'Hybrid': 36, '3-wood': 31, '4 Iron': 18, '7 Iron': 15, '50 deg': 15, '5-wood': 14, '9 Iron': 14, '5 Iron': 13, '6 Iron': 12, 'H 50 deg': 12, '60 deg': 11, '54 deg': 10, '8 Iron': 9, 'H 54 deg': 8, 'PW': 6, '3Q 60 deg': 5}
+2026-04-05 19:40:40,993  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0010.csv
+2026-04-05 19:40:40,993  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0010.csv
+2026-04-05 19:40:46,135  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0010.png
+2026-04-05 19:40:46,136  INFO      --- Iteration 1  N=20 ---
+2026-04-05 19:40:46,136  INFO      --- Iteration 1  N=20 ---
+2026-04-05 19:44:08,256  INFO      Iteration 1  N=20: 280/280 grid points returned valid results  (202.1s)
+2026-04-05 19:44:08,256  INFO      Iteration 1  N=20: 280/280 grid points returned valid results  (202.1s)
+2026-04-05 19:44:08,257  INFO        Match rate vs N=10: 9.3%
+2026-04-05 19:44:08,257  INFO        Match rate vs N=10: 9.3%
+2026-04-05 19:44:08,257  INFO        Club distribution: {'Driver': 51, 'Hybrid': 40, '3-wood': 38, '9 Iron': 15, '4 Iron': 14, '6 Iron': 14, '7 Iron': 14, '60 deg': 14, '50 deg': 12, '8 Iron': 11, '54 deg': 11, '5 Iron': 10, 'H 50 deg': 9, '5-wood': 8, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6}
+2026-04-05 19:44:08,257  INFO        Club distribution: {'Driver': 51, 'Hybrid': 40, '3-wood': 38, '9 Iron': 15, '4 Iron': 14, '6 Iron': 14, '7 Iron': 14, '60 deg': 14, '50 deg': 12, '8 Iron': 11, '54 deg': 11, '5 Iron': 10, 'H 50 deg': 9, '5-wood': 8, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6}
+2026-04-05 19:44:08,264  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0020.csv
+2026-04-05 19:44:08,264  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0020.csv
+2026-04-05 19:44:12,415  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0020.png
+2026-04-05 19:44:12,416  INFO      --- Iteration 2  N=30 ---
+2026-04-05 19:44:12,416  INFO      --- Iteration 2  N=30 ---
+2026-04-05 19:49:12,150  INFO      Iteration 2  N=30: 280/280 grid points returned valid results  (299.7s)
+2026-04-05 19:49:12,150  INFO      Iteration 2  N=30: 280/280 grid points returned valid results  (299.7s)
+2026-04-05 19:49:12,152  INFO        Match rate vs N=20: 11.1%
+2026-04-05 19:49:12,152  INFO        Match rate vs N=20: 11.1%
+2026-04-05 19:49:12,152  INFO        Club distribution: {'Driver': 46, 'Hybrid': 46, '3-wood': 41, '9 Iron': 17, '7 Iron': 16, '6 Iron': 12, '50 deg': 12, 'H 50 deg': 12, '5 Iron': 11, '54 deg': 11, '60 deg': 11, '4 Iron': 10, '5-wood': 9, '8 Iron': 9, 'H 54 deg': 7, '3Q 60 deg': 6, 'PW': 4}
+2026-04-05 19:49:12,152  INFO        Club distribution: {'Driver': 46, 'Hybrid': 46, '3-wood': 41, '9 Iron': 17, '7 Iron': 16, '6 Iron': 12, '50 deg': 12, 'H 50 deg': 12, '5 Iron': 11, '54 deg': 11, '60 deg': 11, '4 Iron': 10, '5-wood': 9, '8 Iron': 9, 'H 54 deg': 7, '3Q 60 deg': 6, 'PW': 4}
+2026-04-05 19:49:12,160  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0030.csv
+2026-04-05 19:49:12,160  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0030.csv
+2026-04-05 19:49:16,043  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0030.png
+2026-04-05 19:49:16,044  INFO      --- Iteration 3  N=40 ---
+2026-04-05 19:49:16,044  INFO      --- Iteration 3  N=40 ---
+2026-04-05 19:55:54,162  INFO      Iteration 3  N=40: 280/280 grid points returned valid results  (398.1s)
+2026-04-05 19:55:54,162  INFO      Iteration 3  N=40: 280/280 grid points returned valid results  (398.1s)
+2026-04-05 19:55:54,163  INFO        Match rate vs N=30: 10.4%
+2026-04-05 19:55:54,163  INFO        Match rate vs N=30: 10.4%
+2026-04-05 19:55:54,164  INFO        Club distribution: {'Driver': 46, '3-wood': 43, 'Hybrid': 41, '9 Iron': 18, '4 Iron': 15, '7 Iron': 15, '6 Iron': 14, 'H 50 deg': 13, '5 Iron': 11, '50 deg': 10, '60 deg': 10, '54 deg': 9, '8 Iron': 8, 'PW': 7, '3Q 60 deg': 7, 'H 54 deg': 7, '5-wood': 6}
+2026-04-05 19:55:54,164  INFO        Club distribution: {'Driver': 46, '3-wood': 43, 'Hybrid': 41, '9 Iron': 18, '4 Iron': 15, '7 Iron': 15, '6 Iron': 14, 'H 50 deg': 13, '5 Iron': 11, '50 deg': 10, '60 deg': 10, '54 deg': 9, '8 Iron': 8, 'PW': 7, '3Q 60 deg': 7, 'H 54 deg': 7, '5-wood': 6}
+2026-04-05 19:55:54,171  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0040.csv
+2026-04-05 19:55:54,171  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0040.csv
+2026-04-05 19:55:57,968  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0040.png
+2026-04-05 19:55:57,969  INFO      --- Iteration 4  N=50 ---
+2026-04-05 19:55:57,969  INFO      --- Iteration 4  N=50 ---
+2026-04-05 20:00:49,879  INFO      HPC worker started.  SLURM_JOB_ID=30529  SLURM_ARRAY_TASK_ID=1  seed=1
+2026-04-05 20:00:49,881  INFO      === Seed 1  START ===
+2026-04-05 20:00:49,881  INFO      === Seed 1  START ===
+2026-04-05 20:00:49,882  INFO      Config: WorkerConfig(n_start=10, n_step=10, n_max=300, k=3, aim_range=(-20.0, 20.0), aim_step=2.0, gp_training_iter=100, early_stop_N=None)
+2026-04-05 20:00:49,882  INFO      Config: WorkerConfig(n_start=10, n_step=10, n_max=300, k=3, aim_range=(-20.0, 20.0), aim_step=2.0, gp_training_iter=100, early_stop_N=None)
+2026-04-05 20:00:49,883  INFO      Building hole geometry and training putt GPR...
+2026-04-05 20:00:49,883  INFO      Building hole geometry and training putt GPR...
+2026-04-05 20:00:49,884  INFO      Building hole from data_dir=/bigdata/rhome/fgdd2022/golfOnPar2026/Parallelisation/data
+2026-04-05 20:00:50,058  INFO      Strategy grid: 280 points (ht_length=334.0)
+2026-04-05 20:00:55,205  INFO      Putt GPR trained (100 iterations).
+2026-04-05 20:00:55,206  INFO      Hole ready. 280 strategy points.
+2026-04-05 20:00:55,206  INFO      Hole ready. 280 strategy points.
+2026-04-05 20:00:55,207  INFO      --- Iteration 0  N_total=10  (+10 new shots) ---
+2026-04-05 20:00:55,207  INFO      --- Iteration 0  N_total=10  (+10 new shots) ---
+2026-04-05 20:02:40,539  INFO      Iteration 0  N=10: 280/280 grid points returned valid results  (105.3s)
+2026-04-05 20:02:40,539  INFO      Iteration 0  N=10: 280/280 grid points returned valid results  (105.3s)
+2026-04-05 20:02:40,540  INFO        Club distribution: {'Driver': 51, 'Hybrid': 36, '3-wood': 31, '4 Iron': 18, '7 Iron': 15, '50 deg': 15, '5-wood': 14, '9 Iron': 14, '5 Iron': 13, '6 Iron': 12, 'H 50 deg': 12, '60 deg': 11, '54 deg': 10, '8 Iron': 9, 'H 54 deg': 8, 'PW': 6, '3Q 60 deg': 5}
+2026-04-05 20:02:40,540  INFO        Club distribution: {'Driver': 51, 'Hybrid': 36, '3-wood': 31, '4 Iron': 18, '7 Iron': 15, '50 deg': 15, '5-wood': 14, '9 Iron': 14, '5 Iron': 13, '6 Iron': 12, 'H 50 deg': 12, '60 deg': 11, '54 deg': 10, '8 Iron': 9, 'H 54 deg': 8, 'PW': 6, '3Q 60 deg': 5}
+2026-04-05 20:02:40,548  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0010.csv
+2026-04-05 20:02:40,548  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0010.csv
+2026-04-05 20:02:47,661  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0010.png
+2026-04-05 20:02:47,662  INFO      --- Iteration 1  N_total=20  (+10 new shots) ---
+2026-04-05 20:02:47,662  INFO      --- Iteration 1  N_total=20  (+10 new shots) ---
+2026-04-05 20:04:34,885  INFO      Iteration 1  N=20: 280/280 grid points returned valid results  (107.2s)
+2026-04-05 20:04:34,885  INFO      Iteration 1  N=20: 280/280 grid points returned valid results  (107.2s)
+2026-04-05 20:04:34,887  INFO        Match rate vs N=10: 35.0%
+2026-04-05 20:04:34,887  INFO        Match rate vs N=10: 35.0%
+2026-04-05 20:04:34,888  INFO        Club distribution: {'Driver': 49, 'Hybrid': 38, '3-wood': 37, '4 Iron': 17, '9 Iron': 16, '6 Iron': 14, '7 Iron': 13, '50 deg': 13, '8 Iron': 12, 'H 50 deg': 12, '5-wood': 11, '60 deg': 11, '5 Iron': 10, '54 deg': 10, '3Q 60 deg': 7, 'H 54 deg': 6, 'PW': 4}
+2026-04-05 20:04:34,888  INFO        Club distribution: {'Driver': 49, 'Hybrid': 38, '3-wood': 37, '4 Iron': 17, '9 Iron': 16, '6 Iron': 14, '7 Iron': 13, '50 deg': 13, '8 Iron': 12, 'H 50 deg': 12, '5-wood': 11, '60 deg': 11, '5 Iron': 10, '54 deg': 10, '3Q 60 deg': 7, 'H 54 deg': 6, 'PW': 4}
+2026-04-05 20:04:34,894  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0020.csv
+2026-04-05 20:04:34,894  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0020.csv
+2026-04-05 20:04:39,074  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0020.png
+2026-04-05 20:04:39,075  INFO      --- Iteration 2  N_total=30  (+10 new shots) ---
+2026-04-05 20:04:39,075  INFO      --- Iteration 2  N_total=30  (+10 new shots) ---
+2026-04-05 20:06:26,719  INFO      Iteration 2  N=30: 280/280 grid points returned valid results  (107.6s)
+2026-04-05 20:06:26,719  INFO      Iteration 2  N=30: 280/280 grid points returned valid results  (107.6s)
+2026-04-05 20:06:26,720  INFO        Match rate vs N=20: 56.4%
+2026-04-05 20:06:26,720  INFO        Match rate vs N=20: 56.4%
+2026-04-05 20:06:26,721  INFO        Club distribution: {'Driver': 49, 'Hybrid': 47, '3-wood': 38, '9 Iron': 17, '7 Iron': 16, '5 Iron': 12, '6 Iron': 12, 'H 50 deg': 12, '50 deg': 11, '54 deg': 11, '60 deg': 11, '4 Iron': 10, '8 Iron': 9, '5-wood': 7, '3Q 60 deg': 7, 'H 54 deg': 6, 'PW': 5}
+2026-04-05 20:06:26,721  INFO        Club distribution: {'Driver': 49, 'Hybrid': 47, '3-wood': 38, '9 Iron': 17, '7 Iron': 16, '5 Iron': 12, '6 Iron': 12, 'H 50 deg': 12, '50 deg': 11, '54 deg': 11, '60 deg': 11, '4 Iron': 10, '8 Iron': 9, '5-wood': 7, '3Q 60 deg': 7, 'H 54 deg': 6, 'PW': 5}
+2026-04-05 20:06:26,727  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0030.csv
+2026-04-05 20:06:26,727  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0030.csv
+2026-04-05 20:06:30,613  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0030.png
+2026-04-05 20:06:30,614  INFO      --- Iteration 3  N_total=40  (+10 new shots) ---
+2026-04-05 20:06:30,614  INFO      --- Iteration 3  N_total=40  (+10 new shots) ---
+2026-04-05 20:08:17,177  INFO      Iteration 3  N=40: 280/280 grid points returned valid results  (106.6s)
+2026-04-05 20:08:17,177  INFO      Iteration 3  N=40: 280/280 grid points returned valid results  (106.6s)
+2026-04-05 20:08:17,178  INFO        Match rate vs N=30: 60.4%
+2026-04-05 20:08:17,178  INFO        Match rate vs N=30: 60.4%
+2026-04-05 20:08:17,179  INFO        Club distribution: {'Driver': 47, '3-wood': 43, 'Hybrid': 40, '9 Iron': 17, '7 Iron': 16, '4 Iron': 15, '5 Iron': 13, '54 deg': 12, '60 deg': 12, '6 Iron': 11, 'H 50 deg': 11, '50 deg': 10, '8 Iron': 9, 'H 54 deg': 7, '5-wood': 6, '3Q 60 deg': 6, 'PW': 5}
+2026-04-05 20:08:17,179  INFO        Club distribution: {'Driver': 47, '3-wood': 43, 'Hybrid': 40, '9 Iron': 17, '7 Iron': 16, '4 Iron': 15, '5 Iron': 13, '54 deg': 12, '60 deg': 12, '6 Iron': 11, 'H 50 deg': 11, '50 deg': 10, '8 Iron': 9, 'H 54 deg': 7, '5-wood': 6, '3Q 60 deg': 6, 'PW': 5}
+2026-04-05 20:08:17,185  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0040.csv
+2026-04-05 20:08:17,185  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0040.csv
+2026-04-05 20:08:20,654  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0040.png
+2026-04-05 20:08:20,655  INFO      --- Iteration 4  N_total=50  (+10 new shots) ---
+2026-04-05 20:08:20,655  INFO      --- Iteration 4  N_total=50  (+10 new shots) ---
+2026-04-05 20:10:06,629  INFO      Iteration 4  N=50: 280/280 grid points returned valid results  (106.0s)
+2026-04-05 20:10:06,629  INFO      Iteration 4  N=50: 280/280 grid points returned valid results  (106.0s)
+2026-04-05 20:10:06,631  INFO        Match rate vs N=40: 67.5%
+2026-04-05 20:10:06,631  INFO        Match rate vs N=40: 67.5%
+2026-04-05 20:10:06,631  INFO        Club distribution: {'Driver': 47, 'Hybrid': 44, '3-wood': 43, '9 Iron': 18, '7 Iron': 15, '6 Iron': 13, '4 Iron': 12, '5 Iron': 12, '60 deg': 12, '54 deg': 11, 'H 50 deg': 11, '8 Iron': 9, '50 deg': 8, 'PW': 7, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:10:06,631  INFO        Club distribution: {'Driver': 47, 'Hybrid': 44, '3-wood': 43, '9 Iron': 18, '7 Iron': 15, '6 Iron': 13, '4 Iron': 12, '5 Iron': 12, '60 deg': 12, '54 deg': 11, 'H 50 deg': 11, '8 Iron': 9, '50 deg': 8, 'PW': 7, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:10:06,637  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0050.csv
+2026-04-05 20:10:06,637  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0050.csv
+2026-04-05 20:10:10,137  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0050.png
+2026-04-05 20:10:10,138  INFO      --- Iteration 5  N_total=60  (+10 new shots) ---
+2026-04-05 20:10:10,138  INFO      --- Iteration 5  N_total=60  (+10 new shots) ---
+2026-04-05 20:11:56,415  INFO      Iteration 5  N=60: 280/280 grid points returned valid results  (106.3s)
+2026-04-05 20:11:56,415  INFO      Iteration 5  N=60: 280/280 grid points returned valid results  (106.3s)
+2026-04-05 20:11:56,417  INFO        Match rate vs N=50: 71.4%
+2026-04-05 20:11:56,417  INFO        Match rate vs N=50: 71.4%
+2026-04-05 20:11:56,417  INFO        Club distribution: {'Hybrid': 48, 'Driver': 46, '3-wood': 42, '9 Iron': 18, '7 Iron': 15, '6 Iron': 13, 'H 50 deg': 12, '60 deg': 12, '5 Iron': 11, '50 deg': 11, '4 Iron': 10, '8 Iron': 9, '54 deg': 9, 'H 54 deg': 7, '5-wood': 6, '3Q 60 deg': 6, 'PW': 5}
+2026-04-05 20:11:56,417  INFO        Club distribution: {'Hybrid': 48, 'Driver': 46, '3-wood': 42, '9 Iron': 18, '7 Iron': 15, '6 Iron': 13, 'H 50 deg': 12, '60 deg': 12, '5 Iron': 11, '50 deg': 11, '4 Iron': 10, '8 Iron': 9, '54 deg': 9, 'H 54 deg': 7, '5-wood': 6, '3Q 60 deg': 6, 'PW': 5}
+2026-04-05 20:11:56,423  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0060.csv
+2026-04-05 20:11:56,423  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0060.csv
+2026-04-05 20:11:59,870  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0060.png
+2026-04-05 20:11:59,871  INFO      --- Iteration 6  N_total=70  (+10 new shots) ---
+2026-04-05 20:11:59,871  INFO      --- Iteration 6  N_total=70  (+10 new shots) ---
+2026-04-05 20:13:46,183  INFO      Iteration 6  N=70: 280/280 grid points returned valid results  (106.3s)
+2026-04-05 20:13:46,183  INFO      Iteration 6  N=70: 280/280 grid points returned valid results  (106.3s)
+2026-04-05 20:13:46,185  INFO        Match rate vs N=60: 70.7%
+2026-04-05 20:13:46,185  INFO        Match rate vs N=60: 70.7%
+2026-04-05 20:13:46,185  INFO        Club distribution: {'Driver': 46, 'Hybrid': 46, '3-wood': 44, '9 Iron': 18, '7 Iron': 15, '5 Iron': 14, '60 deg': 13, '6 Iron': 12, '54 deg': 10, 'H 50 deg': 10, '4 Iron': 9, '8 Iron': 9, '50 deg': 9, 'PW': 7, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:13:46,185  INFO        Club distribution: {'Driver': 46, 'Hybrid': 46, '3-wood': 44, '9 Iron': 18, '7 Iron': 15, '5 Iron': 14, '60 deg': 13, '6 Iron': 12, '54 deg': 10, 'H 50 deg': 10, '4 Iron': 9, '8 Iron': 9, '50 deg': 9, 'PW': 7, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:13:46,192  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0070.csv
+2026-04-05 20:13:46,192  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0070.csv
+2026-04-05 20:13:49,852  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0070.png
+2026-04-05 20:13:49,853  INFO      --- Iteration 7  N_total=80  (+10 new shots) ---
+2026-04-05 20:13:49,853  INFO      --- Iteration 7  N_total=80  (+10 new shots) ---
+2026-04-05 20:15:36,305  INFO      Iteration 7  N=80: 280/280 grid points returned valid results  (106.5s)
+2026-04-05 20:15:36,305  INFO      Iteration 7  N=80: 280/280 grid points returned valid results  (106.5s)
+2026-04-05 20:15:36,307  INFO        Match rate vs N=70: 73.6%
+2026-04-05 20:15:36,307  INFO        Match rate vs N=70: 73.6%
+2026-04-05 20:15:36,307  INFO        Club distribution: {'Hybrid': 48, '3-wood': 44, 'Driver': 43, '9 Iron': 19, '7 Iron': 17, '5 Iron': 13, '60 deg': 12, '54 deg': 11, 'H 50 deg': 11, '4 Iron': 10, '6 Iron': 10, '50 deg': 10, '8 Iron': 8, '3Q 60 deg': 7, '5-wood': 6, 'H 54 deg': 6, 'PW': 5}
+2026-04-05 20:15:36,307  INFO        Club distribution: {'Hybrid': 48, '3-wood': 44, 'Driver': 43, '9 Iron': 19, '7 Iron': 17, '5 Iron': 13, '60 deg': 12, '54 deg': 11, 'H 50 deg': 11, '4 Iron': 10, '6 Iron': 10, '50 deg': 10, '8 Iron': 8, '3Q 60 deg': 7, '5-wood': 6, 'H 54 deg': 6, 'PW': 5}
+2026-04-05 20:15:36,314  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0080.csv
+2026-04-05 20:15:36,314  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0080.csv
+2026-04-05 20:15:39,624  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0080.png
+2026-04-05 20:15:39,625  INFO      --- Iteration 8  N_total=90  (+10 new shots) ---
+2026-04-05 20:15:39,625  INFO      --- Iteration 8  N_total=90  (+10 new shots) ---
+2026-04-05 20:17:25,902  INFO      Iteration 8  N=90: 280/280 grid points returned valid results  (106.3s)
+2026-04-05 20:17:25,902  INFO      Iteration 8  N=90: 280/280 grid points returned valid results  (106.3s)
+2026-04-05 20:17:25,904  INFO        Match rate vs N=80: 76.1%
+2026-04-05 20:17:25,904  INFO        Match rate vs N=80: 76.1%
+2026-04-05 20:17:25,904  INFO        Club distribution: {'Hybrid': 48, 'Driver': 46, '3-wood': 42, '9 Iron': 19, '7 Iron': 17, '5 Iron': 12, '60 deg': 12, '50 deg': 11, '54 deg': 11, 'H 50 deg': 11, '6 Iron': 10, '4 Iron': 9, '8 Iron': 8, '5-wood': 7, 'H 54 deg': 7, '3Q 60 deg': 6, 'PW': 4}
+2026-04-05 20:17:25,904  INFO        Club distribution: {'Hybrid': 48, 'Driver': 46, '3-wood': 42, '9 Iron': 19, '7 Iron': 17, '5 Iron': 12, '60 deg': 12, '50 deg': 11, '54 deg': 11, 'H 50 deg': 11, '6 Iron': 10, '4 Iron': 9, '8 Iron': 8, '5-wood': 7, 'H 54 deg': 7, '3Q 60 deg': 6, 'PW': 4}
+2026-04-05 20:17:25,911  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0090.csv
+2026-04-05 20:17:25,911  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0090.csv
+2026-04-05 20:17:29,220  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0090.png
+2026-04-05 20:17:29,221  INFO      --- Iteration 9  N_total=100  (+10 new shots) ---
+2026-04-05 20:17:29,221  INFO      --- Iteration 9  N_total=100  (+10 new shots) ---
+2026-04-05 20:19:16,675  INFO      Iteration 9  N=100: 280/280 grid points returned valid results  (107.5s)
+2026-04-05 20:19:16,675  INFO      Iteration 9  N=100: 280/280 grid points returned valid results  (107.5s)
+2026-04-05 20:19:16,677  INFO        Match rate vs N=90: 77.9%
+2026-04-05 20:19:16,677  INFO        Match rate vs N=90: 77.9%
+2026-04-05 20:19:16,678  INFO        Club distribution: {'Hybrid': 48, 'Driver': 42, '3-wood': 42, '9 Iron': 19, '7 Iron': 17, '5 Iron': 13, '60 deg': 12, '4 Iron': 11, '54 deg': 11, 'H 50 deg': 11, '6 Iron': 10, '50 deg': 9, '5-wood': 8, '8 Iron': 8, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6}
+2026-04-05 20:19:16,678  INFO        Club distribution: {'Hybrid': 48, 'Driver': 42, '3-wood': 42, '9 Iron': 19, '7 Iron': 17, '5 Iron': 13, '60 deg': 12, '4 Iron': 11, '54 deg': 11, 'H 50 deg': 11, '6 Iron': 10, '50 deg': 9, '5-wood': 8, '8 Iron': 8, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6}
+2026-04-05 20:19:16,684  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0100.csv
+2026-04-05 20:19:16,684  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0100.csv
+2026-04-05 20:19:20,328  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0100.png
+2026-04-05 20:19:20,329  INFO      --- Iteration 10  N_total=110  (+10 new shots) ---
+2026-04-05 20:19:20,329  INFO      --- Iteration 10  N_total=110  (+10 new shots) ---
+2026-04-05 20:21:08,566  INFO      Iteration 10  N=110: 280/280 grid points returned valid results  (108.2s)
+2026-04-05 20:21:08,566  INFO      Iteration 10  N=110: 280/280 grid points returned valid results  (108.2s)
+2026-04-05 20:21:08,568  INFO        Match rate vs N=100: 77.1%
+2026-04-05 20:21:08,568  INFO        Match rate vs N=100: 77.1%
+2026-04-05 20:21:08,569  INFO        Club distribution: {'Hybrid': 49, 'Driver': 44, '3-wood': 41, '9 Iron': 18, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 12, '6 Iron': 11, '60 deg': 11, '54 deg': 10, '4 Iron': 9, '50 deg': 9, '8 Iron': 8, 'PW': 8, '5-wood': 7, 'H 54 deg': 7, '3Q 60 deg': 6}
+2026-04-05 20:21:08,569  INFO        Club distribution: {'Hybrid': 49, 'Driver': 44, '3-wood': 41, '9 Iron': 18, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 12, '6 Iron': 11, '60 deg': 11, '54 deg': 10, '4 Iron': 9, '50 deg': 9, '8 Iron': 8, 'PW': 8, '5-wood': 7, 'H 54 deg': 7, '3Q 60 deg': 6}
+2026-04-05 20:21:08,576  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0110.csv
+2026-04-05 20:21:08,576  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0110.csv
+2026-04-05 20:21:12,163  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0110.png
+2026-04-05 20:21:12,165  INFO      --- Iteration 11  N_total=120  (+10 new shots) ---
+2026-04-05 20:21:12,165  INFO      --- Iteration 11  N_total=120  (+10 new shots) ---
+2026-04-05 20:23:00,134  INFO      Iteration 11  N=120: 280/280 grid points returned valid results  (108.0s)
+2026-04-05 20:23:00,134  INFO      Iteration 11  N=120: 280/280 grid points returned valid results  (108.0s)
+2026-04-05 20:23:00,136  INFO        Match rate vs N=110: 79.6%
+2026-04-05 20:23:00,136  INFO        Match rate vs N=110: 79.6%
+2026-04-05 20:23:00,137  INFO        Club distribution: {'Hybrid': 50, 'Driver': 46, '3-wood': 41, '7 Iron': 17, '9 Iron': 17, '5 Iron': 14, 'H 50 deg': 12, '60 deg': 12, '6 Iron': 10, '54 deg': 10, '8 Iron': 9, '4 Iron': 8, 'PW': 8, '50 deg': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:23:00,137  INFO        Club distribution: {'Hybrid': 50, 'Driver': 46, '3-wood': 41, '7 Iron': 17, '9 Iron': 17, '5 Iron': 14, 'H 50 deg': 12, '60 deg': 12, '6 Iron': 10, '54 deg': 10, '8 Iron': 9, '4 Iron': 8, 'PW': 8, '50 deg': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:23:00,143  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0120.csv
+2026-04-05 20:23:00,143  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0120.csv
+2026-04-05 20:23:03,803  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0120.png
+2026-04-05 20:23:03,804  INFO      --- Iteration 12  N_total=130  (+10 new shots) ---
+2026-04-05 20:23:03,804  INFO      --- Iteration 12  N_total=130  (+10 new shots) ---
+2026-04-05 20:24:51,590  INFO      Iteration 12  N=130: 280/280 grid points returned valid results  (107.8s)
+2026-04-05 20:24:51,590  INFO      Iteration 12  N=130: 280/280 grid points returned valid results  (107.8s)
+2026-04-05 20:24:51,592  INFO        Match rate vs N=120: 81.1%
+2026-04-05 20:24:51,592  INFO        Match rate vs N=120: 81.1%
+2026-04-05 20:24:51,593  INFO        Club distribution: {'Hybrid': 49, 'Driver': 44, '3-wood': 43, '7 Iron': 17, '9 Iron': 17, '5 Iron': 14, 'H 50 deg': 12, '60 deg': 12, '50 deg': 11, '6 Iron': 10, '4 Iron': 9, '8 Iron': 9, '54 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:24:51,593  INFO        Club distribution: {'Hybrid': 49, 'Driver': 44, '3-wood': 43, '7 Iron': 17, '9 Iron': 17, '5 Iron': 14, 'H 50 deg': 12, '60 deg': 12, '50 deg': 11, '6 Iron': 10, '4 Iron': 9, '8 Iron': 9, '54 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:24:51,600  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0130.csv
+2026-04-05 20:24:51,600  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0130.csv
+2026-04-05 20:24:55,281  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0130.png
+2026-04-05 20:24:55,283  INFO      --- Iteration 13  N_total=140  (+10 new shots) ---
+2026-04-05 20:24:55,283  INFO      --- Iteration 13  N_total=140  (+10 new shots) ---
+2026-04-05 20:26:43,188  INFO      Iteration 13  N=140: 280/280 grid points returned valid results  (107.9s)
+2026-04-05 20:26:43,188  INFO      Iteration 13  N=140: 280/280 grid points returned valid results  (107.9s)
+2026-04-05 20:26:43,191  INFO        Match rate vs N=130: 78.2%
+2026-04-05 20:26:43,191  INFO        Match rate vs N=130: 78.2%
+2026-04-05 20:26:43,191  INFO        Club distribution: {'Hybrid': 54, 'Driver': 43, '3-wood': 40, '9 Iron': 18, '7 Iron': 17, '5 Iron': 13, '60 deg': 12, '6 Iron': 11, '50 deg': 11, 'H 50 deg': 11, '54 deg': 10, '8 Iron': 9, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:26:43,191  INFO        Club distribution: {'Hybrid': 54, 'Driver': 43, '3-wood': 40, '9 Iron': 18, '7 Iron': 17, '5 Iron': 13, '60 deg': 12, '6 Iron': 11, '50 deg': 11, 'H 50 deg': 11, '54 deg': 10, '8 Iron': 9, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:26:43,199  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0140.csv
+2026-04-05 20:26:43,199  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0140.csv
+2026-04-05 20:26:46,992  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0140.png
+2026-04-05 20:26:46,993  INFO      --- Iteration 14  N_total=150  (+10 new shots) ---
+2026-04-05 20:26:46,993  INFO      --- Iteration 14  N_total=150  (+10 new shots) ---
+2026-04-05 20:28:35,046  INFO      Iteration 14  N=150: 280/280 grid points returned valid results  (108.1s)
+2026-04-05 20:28:35,046  INFO      Iteration 14  N=150: 280/280 grid points returned valid results  (108.1s)
+2026-04-05 20:28:35,048  INFO        Match rate vs N=140: 84.3%
+2026-04-05 20:28:35,048  INFO        Match rate vs N=140: 84.3%
+2026-04-05 20:28:35,049  INFO        Club distribution: {'Hybrid': 51, 'Driver': 44, '3-wood': 41, '7 Iron': 18, '9 Iron': 17, '5 Iron': 12, 'H 50 deg': 12, '60 deg': 12, '6 Iron': 11, '8 Iron': 10, '50 deg': 10, '54 deg': 10, '4 Iron': 9, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:28:35,049  INFO        Club distribution: {'Hybrid': 51, 'Driver': 44, '3-wood': 41, '7 Iron': 18, '9 Iron': 17, '5 Iron': 12, 'H 50 deg': 12, '60 deg': 12, '6 Iron': 11, '8 Iron': 10, '50 deg': 10, '54 deg': 10, '4 Iron': 9, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:28:35,056  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0150.csv
+2026-04-05 20:28:35,056  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0150.csv
+2026-04-05 20:28:38,875  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0150.png
+2026-04-05 20:28:38,876  INFO      --- Iteration 15  N_total=160  (+10 new shots) ---
+2026-04-05 20:28:38,876  INFO      --- Iteration 15  N_total=160  (+10 new shots) ---
+2026-04-05 20:30:26,700  INFO      Iteration 15  N=160: 280/280 grid points returned valid results  (107.8s)
+2026-04-05 20:30:26,700  INFO      Iteration 15  N=160: 280/280 grid points returned valid results  (107.8s)
+2026-04-05 20:30:26,703  INFO        Match rate vs N=150: 84.6%
+2026-04-05 20:30:26,703  INFO        Match rate vs N=150: 84.6%
+2026-04-05 20:30:26,703  INFO        Club distribution: {'Hybrid': 52, 'Driver': 43, '3-wood': 41, '9 Iron': 18, '7 Iron': 17, '6 Iron': 12, 'H 50 deg': 12, '60 deg': 12, '5 Iron': 11, '50 deg': 11, '4 Iron': 9, '8 Iron': 9, '54 deg': 9, 'H 54 deg': 7, '5-wood': 6, '3Q 60 deg': 6, 'PW': 5}
+2026-04-05 20:30:26,703  INFO        Club distribution: {'Hybrid': 52, 'Driver': 43, '3-wood': 41, '9 Iron': 18, '7 Iron': 17, '6 Iron': 12, 'H 50 deg': 12, '60 deg': 12, '5 Iron': 11, '50 deg': 11, '4 Iron': 9, '8 Iron': 9, '54 deg': 9, 'H 54 deg': 7, '5-wood': 6, '3Q 60 deg': 6, 'PW': 5}
+2026-04-05 20:30:26,711  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0160.csv
+2026-04-05 20:30:26,711  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0160.csv
+2026-04-05 20:30:30,138  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0160.png
+2026-04-05 20:30:30,139  INFO      --- Iteration 16  N_total=170  (+10 new shots) ---
+2026-04-05 20:30:30,139  INFO      --- Iteration 16  N_total=170  (+10 new shots) ---
+2026-04-05 20:32:16,602  INFO      Iteration 16  N=170: 280/280 grid points returned valid results  (106.5s)
+2026-04-05 20:32:16,602  INFO      Iteration 16  N=170: 280/280 grid points returned valid results  (106.5s)
+2026-04-05 20:32:16,605  INFO        Match rate vs N=160: 85.4%
+2026-04-05 20:32:16,605  INFO        Match rate vs N=160: 85.4%
+2026-04-05 20:32:16,606  INFO        Club distribution: {'Hybrid': 52, 'Driver': 42, '3-wood': 42, '7 Iron': 17, '9 Iron': 17, 'H 50 deg': 13, '5 Iron': 12, '6 Iron': 12, '50 deg': 11, '60 deg': 11, '8 Iron': 10, '54 deg': 9, '4 Iron': 8, 'H 54 deg': 7, '5-wood': 6, '3Q 60 deg': 6, 'PW': 5}
+2026-04-05 20:32:16,606  INFO        Club distribution: {'Hybrid': 52, 'Driver': 42, '3-wood': 42, '7 Iron': 17, '9 Iron': 17, 'H 50 deg': 13, '5 Iron': 12, '6 Iron': 12, '50 deg': 11, '60 deg': 11, '8 Iron': 10, '54 deg': 9, '4 Iron': 8, 'H 54 deg': 7, '5-wood': 6, '3Q 60 deg': 6, 'PW': 5}
+2026-04-05 20:32:16,612  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0170.csv
+2026-04-05 20:32:16,612  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0170.csv
+2026-04-05 20:32:19,884  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0170.png
+2026-04-05 20:32:19,885  INFO      --- Iteration 17  N_total=180  (+10 new shots) ---
+2026-04-05 20:32:19,885  INFO      --- Iteration 17  N_total=180  (+10 new shots) ---
+2026-04-05 20:34:05,820  INFO      Iteration 17  N=180: 280/280 grid points returned valid results  (105.9s)
+2026-04-05 20:34:05,820  INFO      Iteration 17  N=180: 280/280 grid points returned valid results  (105.9s)
+2026-04-05 20:34:05,822  INFO        Match rate vs N=170: 83.6%
+2026-04-05 20:34:05,822  INFO        Match rate vs N=170: 83.6%
+2026-04-05 20:34:05,823  INFO        Club distribution: {'Hybrid': 51, 'Driver': 42, '3-wood': 41, '7 Iron': 17, '9 Iron': 17, '5 Iron': 12, '6 Iron': 12, 'H 50 deg': 12, '4 Iron': 11, '60 deg': 11, '8 Iron': 10, '50 deg': 10, '54 deg': 10, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:34:05,823  INFO        Club distribution: {'Hybrid': 51, 'Driver': 42, '3-wood': 41, '7 Iron': 17, '9 Iron': 17, '5 Iron': 12, '6 Iron': 12, 'H 50 deg': 12, '4 Iron': 11, '60 deg': 11, '8 Iron': 10, '50 deg': 10, '54 deg': 10, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:34:05,830  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0180.csv
+2026-04-05 20:34:05,830  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0180.csv
+2026-04-05 20:34:09,159  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0180.png
+2026-04-05 20:34:09,160  INFO      --- Iteration 18  N_total=190  (+10 new shots) ---
+2026-04-05 20:34:09,160  INFO      --- Iteration 18  N_total=190  (+10 new shots) ---
+2026-04-05 20:35:54,540  INFO      Iteration 18  N=190: 280/280 grid points returned valid results  (105.4s)
+2026-04-05 20:35:54,540  INFO      Iteration 18  N=190: 280/280 grid points returned valid results  (105.4s)
+2026-04-05 20:35:54,542  INFO        Match rate vs N=180: 86.1%
+2026-04-05 20:35:54,542  INFO        Match rate vs N=180: 86.1%
+2026-04-05 20:35:54,543  INFO        Club distribution: {'Hybrid': 54, 'Driver': 43, '3-wood': 40, '9 Iron': 17, '7 Iron': 16, '6 Iron': 13, 'H 50 deg': 13, '5 Iron': 12, '60 deg': 11, '8 Iron': 10, '50 deg': 10, '54 deg': 10, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:35:54,543  INFO        Club distribution: {'Hybrid': 54, 'Driver': 43, '3-wood': 40, '9 Iron': 17, '7 Iron': 16, '6 Iron': 13, 'H 50 deg': 13, '5 Iron': 12, '60 deg': 11, '8 Iron': 10, '50 deg': 10, '54 deg': 10, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:35:54,550  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0190.csv
+2026-04-05 20:35:54,550  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0190.csv
+2026-04-05 20:35:57,958  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0190.png
+2026-04-05 20:35:57,960  INFO      --- Iteration 19  N_total=200  (+10 new shots) ---
+2026-04-05 20:35:57,960  INFO      --- Iteration 19  N_total=200  (+10 new shots) ---
+2026-04-05 20:37:42,613  INFO      Iteration 19  N=200: 280/280 grid points returned valid results  (104.7s)
+2026-04-05 20:37:42,613  INFO      Iteration 19  N=200: 280/280 grid points returned valid results  (104.7s)
+2026-04-05 20:37:42,615  INFO        Match rate vs N=190: 86.8%
+2026-04-05 20:37:42,615  INFO        Match rate vs N=190: 86.8%
+2026-04-05 20:37:42,616  INFO        Club distribution: {'Hybrid': 54, 'Driver': 43, '3-wood': 40, '9 Iron': 17, '7 Iron': 16, '6 Iron': 13, '5 Iron': 12, 'H 50 deg': 12, '50 deg': 11, '54 deg': 11, '60 deg': 11, '8 Iron': 10, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 4}
+2026-04-05 20:37:42,616  INFO        Club distribution: {'Hybrid': 54, 'Driver': 43, '3-wood': 40, '9 Iron': 17, '7 Iron': 16, '6 Iron': 13, '5 Iron': 12, 'H 50 deg': 12, '50 deg': 11, '54 deg': 11, '60 deg': 11, '8 Iron': 10, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 4}
+2026-04-05 20:37:42,622  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0200.csv
+2026-04-05 20:37:42,622  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0200.csv
+2026-04-05 20:37:46,095  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0200.png
+2026-04-05 20:37:46,096  INFO      --- Iteration 20  N_total=210  (+10 new shots) ---
+2026-04-05 20:37:46,096  INFO      --- Iteration 20  N_total=210  (+10 new shots) ---
+2026-04-05 20:39:31,336  INFO      Iteration 20  N=210: 280/280 grid points returned valid results  (105.2s)
+2026-04-05 20:39:31,336  INFO      Iteration 20  N=210: 280/280 grid points returned valid results  (105.2s)
+2026-04-05 20:39:31,338  INFO        Match rate vs N=200: 85.4%
+2026-04-05 20:39:31,338  INFO        Match rate vs N=200: 85.4%
+2026-04-05 20:39:31,339  INFO        Club distribution: {'Hybrid': 51, 'Driver': 43, '3-wood': 42, '9 Iron': 17, '7 Iron': 16, '6 Iron': 13, '5 Iron': 12, 'H 50 deg': 12, '54 deg': 11, '60 deg': 11, '8 Iron': 10, '50 deg': 10, '4 Iron': 9, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:39:31,339  INFO        Club distribution: {'Hybrid': 51, 'Driver': 43, '3-wood': 42, '9 Iron': 17, '7 Iron': 16, '6 Iron': 13, '5 Iron': 12, 'H 50 deg': 12, '54 deg': 11, '60 deg': 11, '8 Iron': 10, '50 deg': 10, '4 Iron': 9, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:39:31,346  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0210.csv
+2026-04-05 20:39:31,346  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0210.csv
+2026-04-05 20:39:34,949  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0210.png
+2026-04-05 20:39:34,950  INFO      --- Iteration 21  N_total=220  (+10 new shots) ---
+2026-04-05 20:39:34,950  INFO      --- Iteration 21  N_total=220  (+10 new shots) ---
+2026-04-05 20:41:20,105  INFO      Iteration 21  N=220: 280/280 grid points returned valid results  (105.2s)
+2026-04-05 20:41:20,105  INFO      Iteration 21  N=220: 280/280 grid points returned valid results  (105.2s)
+2026-04-05 20:41:20,107  INFO        Match rate vs N=210: 84.3%
+2026-04-05 20:41:20,107  INFO        Match rate vs N=210: 84.3%
+2026-04-05 20:41:20,108  INFO        Club distribution: {'Hybrid': 50, '3-wood': 44, 'Driver': 43, '7 Iron': 17, '9 Iron': 17, 'H 50 deg': 13, '5 Iron': 12, '6 Iron': 12, '60 deg': 11, '8 Iron': 10, '50 deg': 10, '54 deg': 10, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:41:20,108  INFO        Club distribution: {'Hybrid': 50, '3-wood': 44, 'Driver': 43, '7 Iron': 17, '9 Iron': 17, 'H 50 deg': 13, '5 Iron': 12, '6 Iron': 12, '60 deg': 11, '8 Iron': 10, '50 deg': 10, '54 deg': 10, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:41:20,115  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0220.csv
+2026-04-05 20:41:20,115  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0220.csv
+2026-04-05 20:41:23,634  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0220.png
+2026-04-05 20:41:23,635  INFO      --- Iteration 22  N_total=230  (+10 new shots) ---
+2026-04-05 20:41:23,635  INFO      --- Iteration 22  N_total=230  (+10 new shots) ---
+2026-04-05 20:43:08,659  INFO      Iteration 22  N=230: 280/280 grid points returned valid results  (105.0s)
+2026-04-05 20:43:08,659  INFO      Iteration 22  N=230: 280/280 grid points returned valid results  (105.0s)
+2026-04-05 20:43:08,661  INFO        Match rate vs N=220: 83.6%
+2026-04-05 20:43:08,661  INFO        Match rate vs N=220: 83.6%
+2026-04-05 20:43:08,662  INFO        Club distribution: {'Hybrid': 49, 'Driver': 45, '3-wood': 43, '9 Iron': 18, '7 Iron': 16, '5 Iron': 13, 'H 50 deg': 13, '6 Iron': 12, '60 deg': 11, '50 deg': 10, '8 Iron': 9, '54 deg': 9, '4 Iron': 8, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:43:08,662  INFO        Club distribution: {'Hybrid': 49, 'Driver': 45, '3-wood': 43, '9 Iron': 18, '7 Iron': 16, '5 Iron': 13, 'H 50 deg': 13, '6 Iron': 12, '60 deg': 11, '50 deg': 10, '8 Iron': 9, '54 deg': 9, '4 Iron': 8, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:43:08,669  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0230.csv
+2026-04-05 20:43:08,669  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0230.csv
+2026-04-05 20:43:12,081  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0230.png
+2026-04-05 20:43:12,082  INFO      --- Iteration 23  N_total=240  (+10 new shots) ---
+2026-04-05 20:43:12,082  INFO      --- Iteration 23  N_total=240  (+10 new shots) ---
+2026-04-05 20:44:57,568  INFO      Iteration 23  N=240: 280/280 grid points returned valid results  (105.5s)
+2026-04-05 20:44:57,568  INFO      Iteration 23  N=240: 280/280 grid points returned valid results  (105.5s)
+2026-04-05 20:44:57,571  INFO        Match rate vs N=230: 86.4%
+2026-04-05 20:44:57,571  INFO        Match rate vs N=230: 86.4%
+2026-04-05 20:44:57,572  INFO        Club distribution: {'Hybrid': 48, 'Driver': 44, '3-wood': 41, '7 Iron': 17, '9 Iron': 17, '5 Iron': 14, 'H 50 deg': 13, '4 Iron': 12, '60 deg': 11, '6 Iron': 10, '8 Iron': 10, '50 deg': 10, '54 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:44:57,572  INFO        Club distribution: {'Hybrid': 48, 'Driver': 44, '3-wood': 41, '7 Iron': 17, '9 Iron': 17, '5 Iron': 14, 'H 50 deg': 13, '4 Iron': 12, '60 deg': 11, '6 Iron': 10, '8 Iron': 10, '50 deg': 10, '54 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:44:57,579  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0240.csv
+2026-04-05 20:44:57,579  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0240.csv
+2026-04-05 20:45:01,018  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0240.png
+2026-04-05 20:45:01,019  INFO      --- Iteration 24  N_total=250  (+10 new shots) ---
+2026-04-05 20:45:01,019  INFO      --- Iteration 24  N_total=250  (+10 new shots) ---
+2026-04-05 20:46:46,008  INFO      Iteration 24  N=250: 280/280 grid points returned valid results  (105.0s)
+2026-04-05 20:46:46,008  INFO      Iteration 24  N=250: 280/280 grid points returned valid results  (105.0s)
+2026-04-05 20:46:46,010  INFO        Match rate vs N=240: 88.2%
+2026-04-05 20:46:46,010  INFO        Match rate vs N=240: 88.2%
+2026-04-05 20:46:46,011  INFO        Club distribution: {'Hybrid': 49, 'Driver': 45, '3-wood': 41, '9 Iron': 17, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 13, '6 Iron': 11, '60 deg': 11, '4 Iron': 10, '8 Iron': 10, '50 deg': 10, '54 deg': 10, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:46:46,011  INFO        Club distribution: {'Hybrid': 49, 'Driver': 45, '3-wood': 41, '9 Iron': 17, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 13, '6 Iron': 11, '60 deg': 11, '4 Iron': 10, '8 Iron': 10, '50 deg': 10, '54 deg': 10, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:46:46,017  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0250.csv
+2026-04-05 20:46:46,017  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0250.csv
+2026-04-05 20:46:49,368  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0250.png
+2026-04-05 20:46:49,369  INFO      --- Iteration 25  N_total=260  (+10 new shots) ---
+2026-04-05 20:46:49,369  INFO      --- Iteration 25  N_total=260  (+10 new shots) ---
+2026-04-05 20:48:34,647  INFO      Iteration 25  N=260: 280/280 grid points returned valid results  (105.3s)
+2026-04-05 20:48:34,647  INFO      Iteration 25  N=260: 280/280 grid points returned valid results  (105.3s)
+2026-04-05 20:48:34,649  INFO        Match rate vs N=250: 88.6%
+2026-04-05 20:48:34,649  INFO        Match rate vs N=250: 88.6%
+2026-04-05 20:48:34,650  INFO        Club distribution: {'Hybrid': 50, 'Driver': 46, '3-wood': 41, '9 Iron': 18, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 13, '6 Iron': 11, '60 deg': 11, '50 deg': 10, '54 deg': 10, '8 Iron': 9, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:48:34,650  INFO        Club distribution: {'Hybrid': 50, 'Driver': 46, '3-wood': 41, '9 Iron': 18, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 13, '6 Iron': 11, '60 deg': 11, '50 deg': 10, '54 deg': 10, '8 Iron': 9, '4 Iron': 8, 'H 54 deg': 7, '3Q 60 deg': 6, '5-wood': 5, 'PW': 5}
+2026-04-05 20:48:34,656  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0260.csv
+2026-04-05 20:48:34,656  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0260.csv
+2026-04-05 20:48:37,961  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0260.png
+2026-04-05 20:48:37,962  INFO      --- Iteration 26  N_total=270  (+10 new shots) ---
+2026-04-05 20:48:37,962  INFO      --- Iteration 26  N_total=270  (+10 new shots) ---
+2026-04-05 20:50:22,746  INFO      Iteration 26  N=270: 280/280 grid points returned valid results  (104.8s)
+2026-04-05 20:50:22,746  INFO      Iteration 26  N=270: 280/280 grid points returned valid results  (104.8s)
+2026-04-05 20:50:22,748  INFO        Match rate vs N=260: 85.7%
+2026-04-05 20:50:22,748  INFO        Match rate vs N=260: 85.7%
+2026-04-05 20:50:22,749  INFO        Club distribution: {'Hybrid': 48, 'Driver': 45, '3-wood': 40, '9 Iron': 18, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 13, '4 Iron': 12, '6 Iron': 11, '60 deg': 11, '54 deg': 10, '8 Iron': 9, '50 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:50:22,749  INFO        Club distribution: {'Hybrid': 48, 'Driver': 45, '3-wood': 40, '9 Iron': 18, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 13, '4 Iron': 12, '6 Iron': 11, '60 deg': 11, '54 deg': 10, '8 Iron': 9, '50 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:50:22,756  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0270.csv
+2026-04-05 20:50:22,756  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0270.csv
+2026-04-05 20:50:26,239  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0270.png
+2026-04-05 20:50:26,240  INFO      --- Iteration 27  N_total=280  (+10 new shots) ---
+2026-04-05 20:50:26,240  INFO      --- Iteration 27  N_total=280  (+10 new shots) ---
+2026-04-05 20:52:11,882  INFO      Iteration 27  N=280: 280/280 grid points returned valid results  (105.6s)
+2026-04-05 20:52:11,882  INFO      Iteration 27  N=280: 280/280 grid points returned valid results  (105.6s)
+2026-04-05 20:52:11,885  INFO        Match rate vs N=270: 87.5%
+2026-04-05 20:52:11,885  INFO        Match rate vs N=270: 87.5%
+2026-04-05 20:52:11,886  INFO        Club distribution: {'Hybrid': 51, 'Driver': 43, '3-wood': 40, '9 Iron': 18, '7 Iron': 16, '5 Iron': 13, 'H 50 deg': 13, '6 Iron': 12, '4 Iron': 11, '60 deg': 11, '54 deg': 10, '8 Iron': 9, '50 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:52:11,886  INFO        Club distribution: {'Hybrid': 51, 'Driver': 43, '3-wood': 40, '9 Iron': 18, '7 Iron': 16, '5 Iron': 13, 'H 50 deg': 13, '6 Iron': 12, '4 Iron': 11, '60 deg': 11, '54 deg': 10, '8 Iron': 9, '50 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:52:11,893  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0280.csv
+2026-04-05 20:52:11,893  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0280.csv
+2026-04-05 20:52:15,465  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0280.png
+2026-04-05 20:52:15,466  INFO      --- Iteration 28  N_total=290  (+10 new shots) ---
+2026-04-05 20:52:15,466  INFO      --- Iteration 28  N_total=290  (+10 new shots) ---
+2026-04-05 20:54:00,051  INFO      Iteration 28  N=290: 280/280 grid points returned valid results  (104.6s)
+2026-04-05 20:54:00,051  INFO      Iteration 28  N=290: 280/280 grid points returned valid results  (104.6s)
+2026-04-05 20:54:00,053  INFO        Match rate vs N=280: 90.7%
+2026-04-05 20:54:00,053  INFO        Match rate vs N=280: 90.7%
+2026-04-05 20:54:00,054  INFO        Club distribution: {'Hybrid': 53, 'Driver': 44, '3-wood': 39, '9 Iron': 18, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 13, '6 Iron': 11, '60 deg': 11, '54 deg': 10, '4 Iron': 9, '8 Iron': 9, '50 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:54:00,054  INFO        Club distribution: {'Hybrid': 53, 'Driver': 44, '3-wood': 39, '9 Iron': 18, '7 Iron': 16, '5 Iron': 14, 'H 50 deg': 13, '6 Iron': 11, '60 deg': 11, '54 deg': 10, '4 Iron': 9, '8 Iron': 9, '50 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:54:00,060  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0290.csv
+2026-04-05 20:54:00,060  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0290.csv
+2026-04-05 20:54:03,624  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0290.png
+2026-04-05 20:54:03,625  INFO      --- Iteration 29  N_total=300  (+10 new shots) ---
+2026-04-05 20:54:03,625  INFO      --- Iteration 29  N_total=300  (+10 new shots) ---
+2026-04-05 20:55:51,171  INFO      Iteration 29  N=300: 280/280 grid points returned valid results  (107.5s)
+2026-04-05 20:55:51,171  INFO      Iteration 29  N=300: 280/280 grid points returned valid results  (107.5s)
+2026-04-05 20:55:51,173  INFO        Match rate vs N=290: 89.6%
+2026-04-05 20:55:51,173  INFO        Match rate vs N=290: 89.6%
+2026-04-05 20:55:51,174  INFO        Club distribution: {'Hybrid': 51, 'Driver': 43, '3-wood': 40, '9 Iron': 18, '7 Iron': 17, '5 Iron': 14, 'H 50 deg': 13, '4 Iron': 11, '60 deg': 11, '6 Iron': 10, '54 deg': 10, '8 Iron': 9, '50 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:55:51,174  INFO        Club distribution: {'Hybrid': 51, 'Driver': 43, '3-wood': 40, '9 Iron': 18, '7 Iron': 17, '5 Iron': 14, 'H 50 deg': 13, '4 Iron': 11, '60 deg': 11, '6 Iron': 10, '54 deg': 10, '8 Iron': 9, '50 deg': 9, 'H 54 deg': 7, 'PW': 6, '3Q 60 deg': 6, '5-wood': 5}
+2026-04-05 20:55:51,182  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0300.csv
+2026-04-05 20:55:51,182  INFO      Saved CSV → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0300.csv
+2026-04-05 20:55:54,744  INFO      Saved approach plot → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_N0300.png
+2026-04-05 20:55:54,745  WARNING   Did NOT converge within n_max=300.
+2026-04-05 20:55:54,745  WARNING   Did NOT converge within n_max=300.
+2026-04-05 20:55:54,747  INFO      Result JSON → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_result.json
+2026-04-05 20:55:54,747  INFO      Result JSON → /rhome/fgdd2022/golfOnPar2026/Parallelisation/convergence/outputs/seed0001/seed0001_result.json
+2026-04-05 20:55:54,747  INFO      === Seed 1  DONE  (3304.9s) ===
+2026-04-05 20:55:54,747  INFO      === Seed 1  DONE  (3304.9s) ===
+2026-04-05 20:55:54,759  INFO      Worker finished.  convergence_N=None

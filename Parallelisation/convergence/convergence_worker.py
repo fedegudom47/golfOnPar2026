@@ -49,6 +49,8 @@ class WorkerConfig:
     aim_step: float = 2.0
     gp_training_iter: int = 100
     early_stop_N: Optional[int] = None  # cut short (for quick tests)
+    carry_shift_yards: float = 0.0      # added to mean carry of all clubs
+    variance_scale: float = 1.0         # multiplier on all club covariance matrices
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +214,12 @@ def run_convergence(
 
     # Build hole geometry + train putt GPR (one-time cost per worker)
     logger.info("Building hole geometry and training putt GPR...")
-    hole = build_hole(data_dir, gp_training_iter=config.gp_training_iter)
+    hole = build_hole(
+        data_dir,
+        gp_training_iter=config.gp_training_iter,
+        carry_shift_yards=config.carry_shift_yards,
+        variance_scale=config.variance_scale,
+    )
     logger.info("Hole ready. %d strategy points.", len(hole.strategy_points))
 
     history: deque[dict] = deque(maxlen=config.k)

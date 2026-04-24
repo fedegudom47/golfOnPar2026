@@ -64,10 +64,23 @@ sbatch <<EOF
 #SBATCH --error=${LOG_DIR}/slurm_%A_%a.err
 # #SBATCH --account=${ACCOUNT}
 
-source "\${HOME}/miniconda3/etc/profile.d/conda.sh"
-conda activate golf
+# ── conda activation (tries common install locations) ────────────────────
+_CONDA_SH=""
+for _try in "\${HOME}/miniconda3/etc/profile.d/conda.sh" \
+            "\${HOME}/anaconda3/etc/profile.d/conda.sh" \
+            "/bigdata/apps/miniconda3/etc/profile.d/conda.sh" \
+            "/opt/conda/etc/profile.d/conda.sh"; do
+    if [[ -f "\${_try}" ]]; then _CONDA_SH="\${_try}"; break; fi
+done
 
-python3 -c "import sys; sys.exit(0) if sys.version_info >= (3,9) else sys.exit(1)" || exit 1
+if [[ -z "\${_CONDA_SH}" ]]; then
+    echo "ERROR: conda init script not found."; exit 1
+fi
+source "\${_CONDA_SH}"
+conda activate golf || { echo "ERROR: 'conda activate golf' failed."; exit 1; }
+
+python3 -c "import sys; sys.exit(0) if sys.version_info >= (3,9) else sys.exit(1)" || { echo "ERROR: Python 3.9+ required"; exit 1; }
+python3 -c "import torch, gpytorch, geopandas, shapely, pandas, numpy, scipy, matplotlib" || { echo "ERROR: missing packages"; exit 1; }
 
 cd "${SCRIPT_DIR}"
 

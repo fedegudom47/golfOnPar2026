@@ -1,8 +1,8 @@
 {
   "seed": 1,
   "convergence_N": null,
-  "n_iterations": 2,
-  "wall_time_s": 443.9663854579994,
-  "did_not_converge": false,
-  "stopped_early": true
+  "n_iterations": 29,
+  "wall_time_s": 3304.8622074499726,
+  "did_not_converge": true,
+  "stopped_early": false
 }

@@ -58,10 +58,26 @@ sbatch <<EOF
 #SBATCH --output=${LOG_DIR}/slurm_%A_%a.out
 #SBATCH --error=${LOG_DIR}/slurm_%A_%a.err
 
-source "\${HOME}/miniconda3/etc/profile.d/conda.sh"
-conda activate golf
+# ── conda activation (tries common install locations) ────────────────────
+_CONDA_SH=""
+for _try in "\${HOME}/miniconda3/etc/profile.d/conda.sh" \
+            "\${HOME}/anaconda3/etc/profile.d/conda.sh" \
+            "/bigdata/apps/miniconda3/etc/profile.d/conda.sh" \
+            "/opt/conda/etc/profile.d/conda.sh"; do
+    if [[ -f "\${_try}" ]]; then _CONDA_SH="\${_try}"; break; fi
+done
 
-python3 -c "import sys; sys.exit(0) if sys.version_info >= (3,9) else sys.exit(1)" || exit 1
+if [[ -z "\${_CONDA_SH}" ]]; then
+    echo "ERROR: conda init script not found. Checked:"
+    echo "  ~/miniconda3, ~/anaconda3, /bigdata/apps/miniconda3, /opt/conda"
+    exit 1
+fi
+source "\${_CONDA_SH}"
+conda activate golf || { echo "ERROR: 'conda activate golf' failed. Run: conda create -n golf python=3.10 && pip install torch gpytorch geopandas shapely pandas numpy scipy matplotlib"; exit 1; }
+
+python3 -c "import sys; sys.exit(0) if sys.version_info >= (3,9) else sys.exit(1)" || { echo "ERROR: Python 3.9+ required"; exit 1; }
+echo "Python: \$(python3 --version)"
+python3 -c "import torch, gpytorch, geopandas, shapely, pandas, numpy, scipy, matplotlib; print('All imports OK')" || { echo "ERROR: missing packages — run pip install torch gpytorch geopandas shapely pandas numpy scipy matplotlib"; exit 1; }
 
 cd "${SCRIPT_DIR}"
 

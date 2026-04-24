@@ -1,18 +1,15 @@
 """
 run_hpc_sensitivity.py – Single Slurm task for the sensitivity analysis.
 
-Mirrors the convergence pipeline (simulate_approach_shots + plot_optimal_approaches)
-but with parameterised club distributions (carry_shift, variance_scale) and a
-fixed N=280 instead of an incremental convergence loop.
-
-Adds one extra step: fits an approach-GPR surface and evaluates the tee shot,
-then overlays the best tee shot on the same approach strategy image.
-
-Outputs per task (one per carry_shift × variance_scale config):
-    outputs/{fname}.csv          approach grid, same columns as convergence +
-                                   carry_shift, variance_scale
-    outputs/{fname}.png          approach strategy + tee shot overlay (one image)
-    outputs/{fname}_meta.json    config metadata
+Produces outputs that match the convergence pipeline format exactly:
+  - CSV: same columns as seed####_N####.csv (x, y, club, aim_offset,
+         esho_mean, esho_var, n_total, seed, N) plus carry_shift,
+         variance_scale, is_tee_shot.
+         280 approach rows (is_tee_shot=False) + one row per evaluated
+         tee-shot option (is_tee_shot=True, x/y = tee box position).
+  - PNG: identical style to plot_optimal_approaches() in core.py,
+         with the best tee shot overlaid as a gold star on the same image.
+  - JSON: metadata sidecar.
 
 Usage (called by submit_hpc_sensitivity.sh):
     python run_hpc_sensitivity.py \\
@@ -36,64 +33,202 @@ import logging
 import os
 from pathlib import Path
 
-import gpytorch
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.patches as mpatches
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import numpy as np
-import torch
-
 _HERE = Path(__file__).parent
 _sys.path.insert(0, str(_HERE))
 _sys.path.insert(0, str(_HERE.parent / "convergence"))
 
-from config_matrix import build_config_matrix, get_config
+# ── heavy imports after path setup ────────────────────────────────────────────
+try:
+    import gpytorch
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+    import numpy as np
+    import torch
+    import pandas as pd
+except ImportError as e:
+    _sys.exit(f"ERROR: missing package — {e}\n"
+              f"Run:  pip install gpytorch torch pandas numpy matplotlib")
 
-# Reuse convergence building blocks directly
-from core import (
-    CLUB_STYLES,
-    HoleData,
-    build_hole,
-    plot_hole_layout,
-    results_to_dataframe,
-    rotation_translator,
-    simulate_approach_shots,
-)
-
-# Tee-shot evaluation from run_full_hole (reused verbatim)
-from run_full_hole import (
-    _ApproachGPR,
-    evaluate_tee_shot,
-    fit_approach_gpr,
-)
+try:
+    from config_matrix import build_config_matrix, get_config
+    from core import (
+        CLUB_STYLES,
+        HoleData,
+        build_hole,
+        plot_hole_layout,
+        rotation_translator,
+        simulate_approach_shots,
+    )
+except ImportError as e:
+    _sys.exit(f"ERROR: failed to import local modules — {e}")
 
 
 # ---------------------------------------------------------------------------
-# Combined plot: approach strategy grid + tee shot overlay (one image)
+# Second-stage GPR: (x, y) → optimal ESHO  (inlined from run_full_hole.py)
 # ---------------------------------------------------------------------------
 
-def plot_sensitivity_result(
+class _ApproachGPR(gpytorch.models.ExactGP):
+    def __init__(self, train_x, train_y, likelihood):
+        super().__init__(train_x, train_y, likelihood)
+        self.mean_module  = gpytorch.means.ConstantMean()
+        self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
+        self.covar_module.base_kernel.lengthscale = 15.0
+
+    def forward(self, x):
+        return gpytorch.distributions.MultivariateNormal(
+            self.mean_module(x), self.covar_module(x)
+        )
+
+
+def _fit_approach_gpr(optimal_results, gp_training_iter=100):
+    X = torch.tensor([[r["start"][0], r["start"][1]] for r in optimal_results],
+                     dtype=torch.float32)
+    y = torch.tensor([r["mean"] for r in optimal_results], dtype=torch.float32)
+
+    likelihood = gpytorch.likelihoods.GaussianLikelihood()
+    model = _ApproachGPR(X, y, likelihood)
+    model.train(); likelihood.train()
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+    mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
+    for _ in range(gp_training_iter):
+        optimizer.zero_grad()
+        (-mll(model(X), y)).backward()
+        optimizer.step()
+
+    model.eval(); likelihood.eval()
+    return model, likelihood
+
+
+def _evaluate_tee_shot(hole, approach_model, approach_likelihood,
+                       aim_range, aim_step, n_samples):
+    """Return (best_result, all_results) for all (club, aim) from tee."""
+    tee    = hole.tee_point
+    target = hole.hole
+    total_dist = float(np.linalg.norm(np.array(target) - np.array(tee)))
+    aim_points = list(np.arange(aim_range[0], aim_range[1] + aim_step, aim_step))
+
+    best = None
+    all_results = []
+
+    for club, stats in hole.club_distributions.items():
+        mu, cov = stats["mean"], stats["cov"]
+        for aim in aim_points:
+            samples = np.random.multivariate_normal(mu, cov, size=n_samples)
+            angle_deg = (float(np.degrees(np.arctan(aim / total_dist)))
+                         if total_dist > 0 else 0.0)
+            esho_vals = []
+            for shot in samples:
+                lp = rotation_translator(float(shot[0]), float(shot[1]),
+                                         angle_deg, tee, target)
+                inp = torch.tensor([[lp[0], lp[1]]], dtype=torch.float32)
+                with torch.no_grad(), gpytorch.settings.fast_pred_var():
+                    pred = approach_likelihood(approach_model(inp))
+                    esho = float(pred.mean.item())
+                if not np.isnan(esho):
+                    esho_vals.append(esho)
+
+            if not esho_vals:
+                continue
+
+            total_mean = 1.0 + float(np.mean(esho_vals))
+            total_var  = float(np.var(esho_vals))
+            result = {"club": club, "aim_offset": float(aim),
+                      "mean": total_mean, "var": total_var,
+                      "n_samples": len(esho_vals)}
+            all_results.append(result)
+            if best is None or total_mean < best["mean"]:
+                best = result
+
+    return best, all_results
+
+
+# ---------------------------------------------------------------------------
+# CSV builder
+# ---------------------------------------------------------------------------
+
+def _build_dataframe(
+    optimal_results: list[dict],
+    all_tee: list[dict],
+    hole: HoleData,
+    seed: int,
+    N: int,
+    carry_shift: float,
+    variance_scale: float,
+) -> pd.DataFrame:
+    """Convergence-format CSV with tee shot rows appended.
+
+    Columns identical to seed####_N####.csv:
+        x, y, club, aim_offset, esho_mean, esho_var, n_total, seed, N
+    Plus sensitivity extras:
+        carry_shift, variance_scale, is_tee_shot
+    """
+    rows = []
+
+    # ── Approach grid rows (280, one per strategy point) ──────────────────
+    for r in optimal_results:
+        rows.append({
+            "x":             float(r["start"][0]),
+            "y":             float(r["start"][1]),
+            "club":          r["club"],
+            "aim_offset":    float(r["aim_offset"]),
+            "esho_mean":     float(r["mean"]),
+            "esho_var":      float(r["var"]),
+            "n_total":       int(r.get("n_total", N)),
+            "seed":          seed,
+            "N":             N,
+            "carry_shift":   carry_shift,
+            "variance_scale": variance_scale,
+            "is_tee_shot":   False,
+        })
+
+    # ── Tee shot rows (one per evaluated club × aim combination) ──────────
+    tx, ty = float(hole.tee_point[0]), float(hole.tee_point[1])
+    for r in all_tee:
+        rows.append({
+            "x":             tx,
+            "y":             ty,
+            "club":          r["club"],
+            "aim_offset":    float(r["aim_offset"]),
+            "esho_mean":     float(r["mean"]),   # includes the +1 tee stroke
+            "esho_var":      float(r["var"]),
+            "n_total":       int(r["n_samples"]),
+            "seed":          seed,
+            "N":             N,
+            "carry_shift":   carry_shift,
+            "variance_scale": variance_scale,
+            "is_tee_shot":   True,
+        })
+
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------------------
+# Plot: identical to plot_optimal_approaches() + tee shot overlay
+# ---------------------------------------------------------------------------
+
+def _plot_result(
     optimal_results: list[dict],
     best_tee: dict,
     all_tee: list[dict],
     hole: HoleData,
     carry_shift: float,
     variance_scale: float,
+    N: int,
     output_path: Path,
 ) -> None:
-    """Approach strategy grid (convergence style) + tee shot overlay."""
     title = (
-        f"Sensitivity: carry +{carry_shift:.1f} yd | var ×{variance_scale:.2f}"
-        f"\nBest tee: {best_tee['club']} aim {best_tee['aim_offset']:+.0f} yd"
-        f"  →  E[total strokes] = {best_tee['mean']:.3f}"
+        f"Sensitivity  |  carry +{carry_shift:.1f} yd  |  var ×{variance_scale:.2f}"
+        f"  |  N={N}"
     )
 
     fig, ax = plt.subplots(figsize=(14, 16))
     plot_hole_layout(hole, title=title, plot_strategy_points=False, ax=ax)
 
-    # ── Approach strategy grid (identical to plot_optimal_approaches) ────────
+    # ── Approach grid — IDENTICAL to plot_optimal_approaches() ──────────
     xs    = [r["start"][0] for r in optimal_results]
     ys    = [r["start"][1] for r in optimal_results]
     means = [r["mean"]     for r in optimal_results]
@@ -102,8 +237,8 @@ def plot_sensitivity_result(
         CLUB_STYLES.get(r["club"], {"color": "#999999"})["color"]
         for r in optimal_results
     ]
-    norm_approach = mpl.colors.Normalize(vmin=min(means), vmax=max(means))
-    edge_colors   = [plt.get_cmap("viridis")(norm_approach(m)) for m in means]
+    norm_a      = mpl.colors.Normalize(vmin=min(means), vmax=max(means))
+    edge_colors = [plt.get_cmap("viridis")(norm_a(m)) for m in means]
 
     ax.scatter(xs, ys, c=face_colors, s=25, alpha=0.85, zorder=20,
                edgecolors=edge_colors, linewidths=1.5)
@@ -113,63 +248,41 @@ def plot_sensitivity_result(
         ax.text(x - 2, y + 2.5, f'{short},{int(r["aim_offset"]):+}',
                 fontsize=5, color="black", zorder=21)
 
-    sm_approach = mpl.cm.ScalarMappable(cmap="viridis", norm=norm_approach)
-    sm_approach.set_array([])
-    cbar = fig.colorbar(sm_approach, ax=ax, fraction=0.03, pad=0.01)
+    sm_a = mpl.cm.ScalarMappable(cmap="viridis", norm=norm_a)
+    sm_a.set_array([])
+    cbar = fig.colorbar(sm_a, ax=ax, fraction=0.03, pad=0.01)
     cbar.set_label("ESHO (Expected Strokes to Hole Out)")
 
-    # ── Tee shot overlay ─────────────────────────────────────────────────────
-    tee    = hole.tee_point
-    target = hole.hole
-    total_dist = float(np.linalg.norm(np.array(target) - np.array(tee)))
-
-    # All tee options — small coloured dots
-    tee_means = [r["mean"] for r in all_tee]
-    norm_tee  = mpl.colors.Normalize(vmin=min(tee_means), vmax=max(tee_means))
-    cmap_tee  = plt.get_cmap("RdYlGn_r")
-
-    for r in all_tee:
-        mu        = hole.club_distributions[r["club"]]["mean"]
-        angle_deg = (float(np.degrees(np.arctan(r["aim_offset"] / total_dist)))
-                     if total_dist > 0 else 0.0)
-        lp = rotation_translator(float(mu[0]), float(mu[1]), angle_deg, tee, target)
-        ax.scatter(lp[0], lp[1], color=cmap_tee(norm_tee(r["mean"])),
-                   s=14, alpha=0.5, zorder=15)
-
-    # Best tee shot — gold star
-    mu_best   = hole.club_distributions[best_tee["club"]]["mean"]
-    angle_best = (float(np.degrees(np.arctan(best_tee["aim_offset"] / total_dist)))
-                  if total_dist > 0 else 0.0)
-    lp_best = rotation_translator(
-        float(mu_best[0]), float(mu_best[1]), angle_best, tee, target
-    )
-    ax.scatter(*lp_best, color="gold", s=250, zorder=35,
-               edgecolors="black", linewidths=2,
-               label=f"Best tee: {best_tee['club']} {best_tee['aim_offset']:+.0f} yd")
-    ax.annotate(
-        f"{best_tee['club']}\naim {best_tee['aim_offset']:+.0f} yd\n"
-        f"E[strokes]={best_tee['mean']:.3f}",
-        xy=lp_best, xytext=(lp_best[0] + 12, lp_best[1] + 12),
-        fontsize=9, fontweight="bold", color="black", zorder=40,
-        bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", alpha=0.85),
-        arrowprops=dict(arrowstyle="->", color="black"),
-    )
-
-    # Club legend
-    legend_patches = [
-        mpatches.Patch(facecolor=v["color"], edgecolor="k", label=v["short"])
-        for v in CLUB_STYLES.values()
-        if any(r["club"] == club for r in optimal_results
-               for club in [list(CLUB_STYLES.keys())[list(CLUB_STYLES.values()).index(v)]])
-    ]
-    # simpler: show all clubs that appear in this run
-    used_clubs = {r["club"] for r in optimal_results}
     legend_patches = [
         mpatches.Patch(facecolor=CLUB_STYLES[c]["color"], edgecolor="k",
                        label=CLUB_STYLES[c]["short"])
-        for c in CLUB_STYLES if c in used_clubs
+        for c in CLUB_STYLES
+        if any(r["club"] == c for r in optimal_results)
     ]
     ax.legend(handles=legend_patches, title="Club", loc="upper left", fontsize=7)
+
+    # ── Tee shot — same style as approach grid points ────────────────────
+    tx, ty      = float(hole.tee_point[0]), float(hole.tee_point[1])
+    tee_face    = CLUB_STYLES.get(best_tee["club"], {"color": "#999999"})["color"]
+    tee_edge    = plt.get_cmap("viridis")(norm_a(best_tee["mean"]))
+    tee_short   = CLUB_STYLES.get(best_tee["club"], {"short": best_tee["club"]})["short"]
+
+    ax.scatter(tx, ty, c=[tee_face], s=25, alpha=0.85, zorder=20,
+               edgecolors=[tee_edge], linewidths=1.5)
+    ax.text(tx - 2, ty + 2.5,
+            f'{tee_short},{int(best_tee["aim_offset"]):+}',
+            fontsize=5, color="black", zorder=21)
+
+    # ESHO summary for the tee shot in the top-right corner
+    std = float(np.sqrt(best_tee["var"]))
+    ax.text(0.98, 0.98,
+            f'Tee shot\n'
+            f'{tee_short}  aim {best_tee["aim_offset"]:+.0f} yd\n'
+            f'ESHO = {best_tee["mean"]:.3f} ± {std:.3f}',
+            transform=ax.transAxes,
+            fontsize=8, va="top", ha="right",
+            bbox=dict(boxstyle="round,pad=0.4", fc="white", ec="black", alpha=0.9),
+            zorder=40)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=120, bbox_inches="tight")
@@ -192,10 +305,9 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--task-id",     type=int, default=None)
     p.add_argument("--configs-csv", type=Path, default=_HERE / "param_configs.csv")
     p.add_argument("--n-shots",     type=int, default=280,
-                   help="Approach shots per (grid-point, club, aim). "
-                        "Default 280 matches the convergence study.")
+                   help="Approach shots per (grid-point, club, aim).")
     p.add_argument("--gp-iter",     type=int, default=100,
-                   help="GPR training iterations (putting model + approach GPR).")
+                   help="GPR training iterations (putting + approach GPR).")
     p.add_argument("--aim-range",   type=float, nargs=2, default=[-20.0, 20.0],
                    metavar=("MIN", "MAX"))
     p.add_argument("--aim-step",    type=float, default=2.0)
@@ -210,7 +322,6 @@ def _parse_args() -> argparse.Namespace:
 def main() -> None:
     args = _parse_args()
 
-    # ── Resolve task ID ────────────────────────────────────────────────────
     task_id = args.task_id
     if task_id is None:
         raw = os.environ.get("SLURM_ARRAY_TASK_ID")
@@ -234,9 +345,8 @@ def main() -> None:
     logger.info("Sensitivity worker | SLURM_JOB_ID=%s  task_id=%d",
                 os.environ.get("SLURM_JOB_ID", "N/A"), task_id)
 
-    # ── Config lookup ──────────────────────────────────────────────────────
+    # ── Config ────────────────────────────────────────────────────────────
     if args.configs_csv.exists():
-        import pandas as pd
         df_cfg = pd.read_csv(args.configs_csv)
     else:
         logger.warning("configs-csv not found; regenerating.")
@@ -252,6 +362,9 @@ def main() -> None:
                 task_id, trend, carry_shift, variance_scale, N)
 
     data_dir = Path(args.data_dir) if args.data_dir else _HERE.parent / "data"
+    logger.info("Data dir: %s", data_dir)
+    if not data_dir.exists():
+        _sys.exit(f"ERROR: data-dir does not exist: {data_dir}")
 
     # ── 1. Build hole ──────────────────────────────────────────────────────
     logger.info("Building hole ...")
@@ -263,8 +376,8 @@ def main() -> None:
     )
     logger.info("Hole ready. %d strategy points.", len(hole.strategy_points))
 
-    # ── 2. Approach shot simulation (single batch, N shots per combo) ──────
-    logger.info("Simulating approach shots (N=%d) ...", N)
+    # ── 2. Approach simulation ─────────────────────────────────────────────
+    logger.info("Simulating approach shots (N=%d per combo) ...", N)
     np.random.seed(task_id)
     optimal_results, _ = simulate_approach_shots(
         hole=hole,
@@ -273,28 +386,16 @@ def main() -> None:
         aim_range=tuple(args.aim_range),
         aim_step=args.aim_step,
     )
-    logger.info("Approach simulation done. %d grid points.", len(optimal_results))
+    logger.info("Approach done. %d grid points.", len(optimal_results))
 
-    # ── 3. Save CSV (same format as convergence) ───────────────────────────
-    fname_base = f"sensitivity_dist{carry_shift:.2f}_disp{variance_scale:.4f}"
-    csv_path   = args.output_dir / f"{fname_base}.csv"
-
-    import pandas as pd
-    df = results_to_dataframe(optimal_results, seed=task_id, N=N)
-    df["carry_shift"]    = carry_shift
-    df["variance_scale"] = variance_scale
-    df.to_csv(csv_path, index=False)
-    logger.info("CSV saved → %s  (%d rows)", csv_path, len(df))
-
-    # ── 4. Fit approach GPR for tee shot ───────────────────────────────────
-    logger.info("Fitting approach GPR ...")
-    approach_model, approach_likelihood = fit_approach_gpr(
+    # ── 3. Approach GPR + tee shot evaluation ─────────────────────────────
+    logger.info("Fitting approach GPR (%d iter) ...", args.gp_iter)
+    approach_model, approach_likelihood = _fit_approach_gpr(
         optimal_results, gp_training_iter=args.gp_iter
     )
 
-    # ── 5. Evaluate tee shot ───────────────────────────────────────────────
     logger.info("Evaluating tee shot (%d samples per combo) ...", args.tee_samples)
-    best_tee, all_tee = evaluate_tee_shot(
+    best_tee, all_tee = _evaluate_tee_shot(
         hole=hole,
         approach_model=approach_model,
         approach_likelihood=approach_likelihood,
@@ -305,33 +406,49 @@ def main() -> None:
     logger.info("Best tee: %s  aim=%+.0f yd  E[strokes]=%.4f",
                 best_tee["club"], best_tee["aim_offset"], best_tee["mean"])
 
-    # ── 6. Combined plot ───────────────────────────────────────────────────
+    # ── 4. Save CSV (approach rows + tee rows) ─────────────────────────────
+    fname_base = f"sensitivity_dist{carry_shift:.2f}_disp{variance_scale:.4f}"
+    csv_path   = args.output_dir / f"{fname_base}.csv"
+
+    df = _build_dataframe(optimal_results, all_tee, hole,
+                          seed=task_id, N=N,
+                          carry_shift=carry_shift, variance_scale=variance_scale)
+    df.to_csv(csv_path, index=False)
+
+    n_approach = (df["is_tee_shot"] == False).sum()
+    n_tee      = (df["is_tee_shot"] == True).sum()
+    logger.info("CSV saved → %s  (%d approach + %d tee rows)", csv_path, n_approach, n_tee)
+
+    # ── 5. Plot ────────────────────────────────────────────────────────────
     png_path = args.output_dir / f"{fname_base}.png"
     logger.info("Generating plot ...")
-    plot_sensitivity_result(
+    _plot_result(
         optimal_results=optimal_results,
         best_tee=best_tee,
         all_tee=all_tee,
         hole=hole,
         carry_shift=carry_shift,
         variance_scale=variance_scale,
+        N=N,
         output_path=png_path,
     )
 
-    # ── 7. Metadata ────────────────────────────────────────────────────────
+    # ── 6. Metadata ────────────────────────────────────────────────────────
+    approach_df = df[df["is_tee_shot"] == False]
     meta = {
-        "task_id":         task_id,
-        "trend":           trend,
-        "carry_shift":     carry_shift,
-        "variance_scale":  variance_scale,
-        "N":               N,
-        "n_grid_points":   len(optimal_results),
-        "mean_esho":       float(df["esho_mean"].mean()),
-        "best_tee_club":   best_tee["club"],
-        "best_tee_aim":    best_tee["aim_offset"],
+        "task_id":          task_id,
+        "trend":            trend,
+        "carry_shift":      carry_shift,
+        "variance_scale":   variance_scale,
+        "N":                N,
+        "n_approach_rows":  int(n_approach),
+        "n_tee_rows":       int(n_tee),
+        "mean_esho":        float(approach_df["esho_mean"].mean()),
+        "best_tee_club":    best_tee["club"],
+        "best_tee_aim":     best_tee["aim_offset"],
         "best_tee_strokes": best_tee["mean"],
-        "output_csv":      f"{fname_base}.csv",
-        "output_png":      f"{fname_base}.png",
+        "output_csv":       f"{fname_base}.csv",
+        "output_png":       f"{fname_base}.png",
     }
     meta_path = args.output_dir / f"{fname_base}_meta.json"
     with open(meta_path, "w") as f:

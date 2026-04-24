@@ -1,5 +1,10 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(python3 run_hpc_sensitivity.py --task-id 0 --n-shots 5 --gp-iter 20 --tee-samples 5 --output-dir /tmp/sens_test)",
+      "Bash(python3 run_hpc_sensitivity.py --task-id 0 --n-shots 5 --gp-iter 20 --tee-samples 5 --output-dir /tmp/sens_test2)"
+    ],
     "additionalDirectories": [
       "/Users/federicadomecq/gitrepos/golfOnPar/Parallelisation/src"
     ]
