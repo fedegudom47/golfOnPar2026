@@ -27,11 +27,12 @@ logging.basicConfig(
 logger = logging.getLogger("validate")
 
 EXPECTED_CSV_COLS = {
-    "sim_id", "shot_num", "x", "y", "club",
-    "lie", "is_tee", "aim_offset", "carry_shift", "variance_scale",
+    "x", "y", "club", "aim_offset",
+    "esho_mean", "esho_var", "n_total", "seed", "N",
+    "carry_shift", "variance_scale",
 }
-EXPECTED_PNG_SUFFIXES = ["_landing_map.png", "_score_dist.png", "_tee_shot.png"]
-PLAUSIBLE_STROKES     = (2, 15)
+EXPECTED_PNG_SUFFIXES = [".png"]   # one combined image per config
+PLAUSIBLE_ESHO        = (1.0, 8.0)
 
 
 def _ok(label: str) -> None:
@@ -71,71 +72,42 @@ def validate_one(csv_path: Path, verbose: bool = False) -> dict:
     missing = EXPECTED_CSV_COLS - set(df.columns)
     check(not missing, "CSV columns complete", f"missing {missing}")
 
-    # 3. Non-empty
-    check(len(df) > 0, "CSV non-empty", f"{len(df)} rows")
+    # 3. Non-empty (one row per strategy grid point, typically 280)
+    check(len(df) > 0, f"CSV non-empty ({len(df)} rows)", "CSV is empty")
 
-    # 4. Driver never in non-tee shots
-    if "is_tee" in df.columns and "club" in df.columns:
-        bad = df[(df["is_tee"] == False) & (df["club"] == "Driver")]
-        check(len(bad) == 0, "Driver excluded from non-tee shots",
-              f"{len(bad)} violations")
-
-    # 5. All shot_num==1 are tee shots
-    if "shot_num" in df.columns and "is_tee" in df.columns:
-        shot1 = df[df["shot_num"] == 1]
-        check((shot1["is_tee"] == True).all(), "All shot_num=1 have is_tee=True")
-        late_tee = df[(df["shot_num"] > 1) & (df["is_tee"] == True)]
-        check(len(late_tee) == 0, "No is_tee=True after shot_num=1",
-              f"{len(late_tee)} rows")
-
-    # 6. Score range
-    if "sim_id" in df.columns and "shot_num" in df.columns:
-        strokes = df.groupby("sim_id")["shot_num"].max()
-        lo, hi  = PLAUSIBLE_STROKES
-        out_rng = strokes[(strokes < lo) | (strokes > hi)]
-        check(len(out_rng) == 0, f"Scores in [{lo}, {hi}]",
-              f"{len(out_rng)} holes outside range: {out_rng.tolist()[:5]}")
+    # 4. ESHO values are finite and in plausible range
+    if "esho_mean" in df.columns:
+        lo, hi  = PLAUSIBLE_ESHO
+        bad_esho = df[(df["esho_mean"] < lo) | (df["esho_mean"] > hi)]
+        check(len(bad_esho) == 0, f"All esho_mean in [{lo}, {hi}]",
+              f"{len(bad_esho)} rows outside range")
         if verbose:
-            logger.info("    Strokes: mean=%.2f std=%.2f min=%d max=%d",
-                        strokes.mean(), strokes.std(), strokes.min(), strokes.max())
+            logger.info("    esho_mean: %.3f – %.3f (mean %.3f)",
+                        df["esho_mean"].min(), df["esho_mean"].max(),
+                        df["esho_mean"].mean())
 
-    # 7. Meta JSON
+    # 5. Meta JSON
     meta_path = out_dir / f"{stem}_meta.json"
     check(meta_path.exists(), f"Meta JSON exists ({stem}_meta.json)")
     if meta_path.exists():
         try:
             meta = json.loads(meta_path.read_text())
             required_keys = {"task_id", "carry_shift", "variance_scale",
-                             "n_sims", "mean_strokes", "tee_top_club"}
+                             "N", "best_tee_club", "best_tee_strokes"}
             missing_keys = required_keys - set(meta)
             check(not missing_keys, "Meta JSON has required keys",
                   f"missing {missing_keys}")
-            if verbose and "mean_strokes" in meta:
-                logger.info("    mean_strokes=%.2f  tee_club=%s",
-                            meta["mean_strokes"], meta.get("tee_top_club", "?"))
+            if verbose and "best_tee_strokes" in meta:
+                logger.info("    best_tee: %s  aim=%+.0f  strokes=%.3f",
+                            meta.get("best_tee_club", "?"),
+                            meta.get("best_tee_aim", 0),
+                            meta["best_tee_strokes"])
         except Exception as e:
             check(False, "Meta JSON parseable", str(e))
 
-    # 8. Tee summary JSON
-    tee_path = out_dir / f"{stem}_tee.json"
-    check(tee_path.exists(), f"Tee summary JSON exists ({stem}_tee.json)")
-    if tee_path.exists():
-        try:
-            tee = json.loads(tee_path.read_text())
-            tee_keys = {"n_tee_shots", "top_club", "landing_mean_x", "landing_mean_y"}
-            check(tee_keys.issubset(tee), "Tee JSON has required keys",
-                  f"missing {tee_keys - set(tee)}")
-            if verbose:
-                logger.info("    Tee: top_club=%s  mean=(%.1f, %.1f)",
-                            tee.get("top_club"), tee.get("landing_mean_x"),
-                            tee.get("landing_mean_y"))
-        except Exception as e:
-            check(False, "Tee JSON parseable", str(e))
-
-    # 9. PNGs
-    for suffix in EXPECTED_PNG_SUFFIXES:
-        png = out_dir / f"{stem}{suffix}"
-        check(png.exists(), f"Plot exists ({png.name})")
+    # 6. PNG (one combined image)
+    png = out_dir / f"{stem}.png"
+    check(png.exists(), f"PNG exists ({png.name})")
 
     return results
 
@@ -148,7 +120,7 @@ def main() -> None:
                    help="Print per-check details even for passes.")
     args = p.parse_args()
 
-    csv_files = sorted(args.output_dir.glob("sim_output_dist*.csv"))
+    csv_files = sorted(args.output_dir.glob("sensitivity_dist*.csv"))
     if not csv_files:
         logger.error("No sim_output_dist*.csv files found in %s", args.output_dir)
         sys.exit(1)

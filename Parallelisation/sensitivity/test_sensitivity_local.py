@@ -1,17 +1,17 @@
 """
 test_sensitivity_local.py – Fast local validation of the sensitivity pipeline.
 
-Runs task_id=0 with n_sims=10, then checks every expected output:
-  - CSV exists with correct columns
-  - Driver never appears in non-tee shots
-  - Tee shots have shot_num=1 and is_tee=True
-  - Score distribution is plausible (2–15 strokes per hole for a Par-4)
-  - Metadata JSON, tee summary JSON, and three PNGs all exist
+Runs task_id=0 with n_shots=10, then checks every expected output:
+  - CSV has same columns as convergence + carry_shift, variance_scale
+  - 280 rows (one per strategy grid point)
+  - PNG exists
+  - Metadata JSON exists with tee shot fields
+  - Approach GPR + tee evaluation runs without error
 
 Usage:
     cd Parallelisation/sensitivity
     python test_sensitivity_local.py
-    python test_sensitivity_local.py --n-sims 5 --task-id 3   # spot-check another task
+    python test_sensitivity_local.py --n-shots 10 --task-id 5
 """
 
 from __future__ import annotations
@@ -22,10 +22,9 @@ import logging
 import sys
 from pathlib import Path
 
-import pandas as pd
-
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parent / "convergence"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,84 +33,99 @@ logging.basicConfig(
 )
 logger = logging.getLogger("sensitivity_test")
 
-EXPECTED_CSV_COLUMNS = {
-    "sim_id", "shot_num", "x", "y", "club",
-    "lie", "is_tee", "aim_offset", "carry_shift", "variance_scale",
+EXPECTED_CSV_COLS = {
+    "x", "y", "club", "aim_offset",
+    "esho_mean", "esho_var", "n_total", "seed", "N",
+    "carry_shift", "variance_scale",
 }
-PLAUSIBLE_STROKES = (2, 15)
 
 
-def _check(condition: bool, msg_pass: str, msg_fail: str) -> bool:
-    if condition:
+def _check(cond: bool, msg_pass: str, msg_fail: str) -> bool:
+    if cond:
         logger.info("  PASS  %s", msg_pass)
     else:
         logger.error("  FAIL  %s", msg_fail)
-    return condition
+    return cond
 
 
-def run_tests(task_id: int, n_sims: int, output_dir: Path, data_dir: Path | None) -> bool:
+def run_tests(task_id: int, n_shots: int, output_dir: Path, data_dir: Path | None) -> bool:
+    import numpy as np
+    import pandas as pd
+
     from config_matrix import build_config_matrix, get_config
-    from sim_full_hole import generate_sensitivity_plots, get_tee_summary, output_filename, run_sensitivity
+    from run_hpc_sensitivity import plot_sensitivity_result
+    from core import build_hole, results_to_dataframe, simulate_approach_shots
+    from run_full_hole import evaluate_tee_shot, fit_approach_gpr
 
-    # ── Resolve config ─────────────────────────────────────────────────────
-    df_configs = build_config_matrix()
-    cfg        = get_config(task_id, df_configs)
+    df_cfg         = build_config_matrix()
+    cfg            = get_config(task_id, df_cfg)
     carry_shift    = float(cfg["carry_shift"])
     variance_scale = float(cfg["variance_scale"])
-    fname_base     = output_filename(carry_shift, variance_scale)
-    csv_path       = output_dir / f"{fname_base}.csv"
-    meta_path      = output_dir / f"{fname_base}_meta.json"
-    tee_path       = output_dir / f"{fname_base}_tee.json"
+    trend          = int(cfg["trend"])
+
+    fname_base = f"sensitivity_dist{carry_shift:.2f}_disp{variance_scale:.4f}"
+    csv_path   = output_dir / f"{fname_base}.csv"
+    png_path   = output_dir / f"{fname_base}.png"
+    meta_path  = output_dir / f"{fname_base}_meta.json"
 
     logger.info("=" * 60)
     logger.info("Sensitivity pipeline test")
-    logger.info("  task_id       = %d", task_id)
-    logger.info("  carry_shift   = %.2f yd", carry_shift)
-    logger.info("  variance_scale= %.4f", variance_scale)
-    logger.info("  n_sims        = %d", n_sims)
-    logger.info("  output_dir    = %s", output_dir)
+    logger.info("  task_id        = %d", task_id)
+    logger.info("  carry_shift    = %.2f yd", carry_shift)
+    logger.info("  variance_scale = %.4f", variance_scale)
+    logger.info("  n_shots        = %d", n_shots)
+    logger.info("  output_dir     = %s", output_dir)
     logger.info("=" * 60)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    # ── Run the pipeline ───────────────────────────────────────────────────
-    logger.info("Running simulation ...")
     if data_dir is None:
         data_dir = _HERE.parent / "data"
 
-    df, hole = run_sensitivity(
-        carry_shift=carry_shift,
-        variance_scale=variance_scale,
-        n_sims=n_sims,
-        seed=task_id,
+    # ── Run the pipeline ───────────────────────────────────────────────────
+    logger.info("Building hole ...")
+    hole = build_hole(
         data_dir=data_dir,
-        gp_training_iter=50,   # fast for testing
+        gp_training_iter=50,
+        carry_shift_yards=carry_shift,
+        variance_scale=variance_scale,
     )
 
+    logger.info("Simulating approach shots (N=%d) ...", n_shots)
+    np.random.seed(task_id)
+    optimal_results, _ = simulate_approach_shots(
+        hole=hole, n_new=n_shots, accumulator=None,
+        aim_range=(-20.0, 20.0), aim_step=2.0,
+    )
+
+    df = results_to_dataframe(optimal_results, seed=task_id, N=n_shots)
+    df["carry_shift"]    = carry_shift
+    df["variance_scale"] = variance_scale
     df.to_csv(csv_path, index=False)
 
-    tee_summary = get_tee_summary(df)
-    with open(tee_path, "w") as f:
-        json.dump(tee_summary, f, indent=2)
+    logger.info("Fitting approach GPR + evaluating tee shot ...")
+    approach_model, approach_likelihood = fit_approach_gpr(optimal_results, gp_training_iter=50)
+    best_tee, all_tee = evaluate_tee_shot(
+        hole=hole, approach_model=approach_model,
+        approach_likelihood=approach_likelihood, n_samples=20,
+    )
 
-    strokes_per_hole = df.groupby("sim_id")["shot_num"].max()
+    plot_sensitivity_result(
+        optimal_results=optimal_results, best_tee=best_tee, all_tee=all_tee,
+        hole=hole, carry_shift=carry_shift, variance_scale=variance_scale,
+        output_path=png_path,
+    )
+
     meta = {
-        "task_id":       task_id,
-        "carry_shift":   carry_shift,
-        "variance_scale": variance_scale,
-        "n_sims":        n_sims,
-        "n_shots_total": len(df),
-        "mean_strokes":  float(strokes_per_hole.mean()),
-        "tee_top_club":  tee_summary.get("top_club", "N/A"),
+        "task_id": task_id, "trend": trend,
+        "carry_shift": carry_shift, "variance_scale": variance_scale,
+        "N": n_shots, "n_grid_points": len(optimal_results),
+        "mean_esho": float(df["esho_mean"].mean()),
+        "best_tee_club": best_tee["club"],
+        "best_tee_aim": best_tee["aim_offset"],
+        "best_tee_strokes": best_tee["mean"],
     }
     with open(meta_path, "w") as f:
         json.dump(meta, f, indent=2)
-
-    plot_paths = generate_sensitivity_plots(
-        df=df, hole=hole,
-        carry_shift=carry_shift, variance_scale=variance_scale,
-        output_dir=output_dir, fname_base=fname_base,
-    )
 
     # ── Assertions ─────────────────────────────────────────────────────────
     results: list[bool] = []
@@ -119,66 +133,34 @@ def run_tests(task_id: int, n_sims: int, output_dir: Path, data_dir: Path | None
     # 1. CSV exists
     results.append(_check(csv_path.exists(), f"CSV exists: {csv_path.name}", "CSV not found"))
 
-    # 2. CSV has expected columns
-    actual_cols = set(df.columns)
-    missing     = EXPECTED_CSV_COLUMNS - actual_cols
-    results.append(_check(
-        not missing,
-        "CSV has all expected columns",
-        f"CSV missing columns: {missing}",
-    ))
+    # 2. Columns match convergence format + extras
+    missing = EXPECTED_CSV_COLS - set(df.columns)
+    results.append(_check(not missing, "All expected columns present",
+                           f"Missing columns: {missing}"))
 
-    # 3. Driver never in non-tee shots
-    non_tee_driver = df[(df["is_tee"] == False) & (df["club"] == "Driver")]
-    results.append(_check(
-        len(non_tee_driver) == 0,
-        "Driver never used on non-tee shots",
-        f"Driver found in {len(non_tee_driver)} non-tee shots — check ClubSelector!",
-    ))
+    # 3. Row count = number of strategy grid points
+    n_grid = len(hole.strategy_points)
+    results.append(_check(len(df) == n_grid, f"CSV has {n_grid} rows (one per grid point)",
+                           f"CSV has {len(df)} rows, expected {n_grid}"))
 
-    # 4. All shot_num==1 rows are tee shots
-    shot1 = df[df["shot_num"] == 1]
-    results.append(_check(
-        (shot1["is_tee"] == True).all(),
-        "All shot_num=1 rows have is_tee=True",
-        "Some shot_num=1 rows have is_tee=False",
-    ))
+    # 4. ESHO values are finite and positive
+    bad_esho = df[df["esho_mean"] <= 0]
+    results.append(_check(len(bad_esho) == 0, "All esho_mean > 0",
+                           f"{len(bad_esho)} rows with esho_mean <= 0"))
 
-    # 5. No tee shots after shot_num==1
-    late_tee = df[(df["shot_num"] > 1) & (df["is_tee"] == True)]
-    results.append(_check(
-        len(late_tee) == 0,
-        "No is_tee=True after shot_num=1",
-        f"{len(late_tee)} tee-flag rows appear after shot 1",
-    ))
+    # 5. PNG exists
+    results.append(_check(png_path.exists(), f"PNG exists: {png_path.name}", "PNG not found"))
 
-    # 6. Plausible score range
-    lo, hi = PLAUSIBLE_STROKES
-    out_of_range = strokes_per_hole[(strokes_per_hole < lo) | (strokes_per_hole > hi)]
-    results.append(_check(
-        len(out_of_range) == 0,
-        f"All hole scores in [{lo}, {hi}]",
-        f"{len(out_of_range)} holes outside [{lo}, {hi}]: {out_of_range.tolist()[:5]}",
-    ))
+    # 6. Metadata has tee shot fields
+    tee_keys = {"best_tee_club", "best_tee_aim", "best_tee_strokes"}
+    results.append(_check(tee_keys.issubset(meta),
+                           "Metadata has tee shot fields",
+                           f"Missing: {tee_keys - set(meta)}"))
 
-    # 7. Tee summary JSON exists and has expected keys
-    tee_keys = {"n_tee_shots", "top_club", "landing_mean_x", "landing_mean_y"}
-    results.append(_check(
-        tee_path.exists() and tee_keys.issubset(tee_summary),
-        "Tee summary JSON exists with required keys",
-        f"Tee summary missing keys: {tee_keys - set(tee_summary)}",
-    ))
-
-    # 8. All three PNGs exist
-    for name, path in plot_paths.items():
-        results.append(_check(path.exists(), f"Plot exists: {path.name}", f"Plot missing: {path}"))
-
-    # 9. Row count sanity (at least n_sims rows — each hole has ≥ 1 shot)
-    results.append(_check(
-        len(df) >= n_sims,
-        f"CSV has ≥{n_sims} rows ({len(df)} rows)",
-        f"CSV has only {len(df)} rows for {n_sims} sims",
-    ))
+    # 7. Tee strokes are plausible (3.5–6.0 for a Par-4)
+    ts = meta["best_tee_strokes"]
+    results.append(_check(3.0 <= ts <= 7.0, f"Tee E[strokes]={ts:.3f} is plausible",
+                           f"Tee E[strokes]={ts:.3f} is outside [3.0, 7.0]"))
 
     # ── Summary ────────────────────────────────────────────────────────────
     passed = sum(results)
@@ -186,15 +168,13 @@ def run_tests(task_id: int, n_sims: int, output_dir: Path, data_dir: Path | None
     logger.info("")
     logger.info("=" * 60)
     logger.info("Results: %d/%d passed", passed, total)
-    logger.info("Mean strokes/hole : %.2f", strokes_per_hole.mean())
-    logger.info("Tee top club      : %s", tee_summary.get("top_club", "N/A"))
-    logger.info("Tee mean landing  : (%.1f, %.1f)",
-                tee_summary.get("landing_mean_x", 0),
-                tee_summary.get("landing_mean_y", 0))
+    logger.info("Mean ESHO        : %.3f", meta["mean_esho"])
+    logger.info("Best tee shot    : %s  aim=%+.0f yd  E[strokes]=%.3f",
+                meta["best_tee_club"], meta["best_tee_aim"], meta["best_tee_strokes"])
     logger.info("=" * 60)
 
     if passed < total:
-        logger.error("%d test(s) FAILED — fix before submitting to HPC", total - passed)
+        logger.error("%d test(s) FAILED", total - passed)
         return False
     logger.info("All tests passed. Safe to submit to HPC.")
     return True
@@ -202,22 +182,15 @@ def run_tests(task_id: int, n_sims: int, output_dir: Path, data_dir: Path | None
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    p.add_argument("--task-id",    type=int, default=0,
-                   help="Config row to test (0–23).")
-    p.add_argument("--n-sims",     type=int, default=10,
-                   help="Number of holes to simulate.")
-    p.add_argument("--output-dir", type=Path, default=_HERE / "test_outputs",
-                   help="Where to save test outputs.")
+    p.add_argument("--task-id",    type=int, default=0)
+    p.add_argument("--n-shots",    type=int, default=10,
+                   help="Approach shots per combo (keep low for speed).")
+    p.add_argument("--output-dir", type=Path, default=_HERE / "test_outputs")
     p.add_argument("--data-dir",   type=Path, default=None)
     return p.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
-    ok = run_tests(
-        task_id=args.task_id,
-        n_sims=args.n_sims,
-        output_dir=args.output_dir,
-        data_dir=args.data_dir,
-    )
+    ok = run_tests(args.task_id, args.n_shots, args.output_dir, args.data_dir)
     sys.exit(0 if ok else 1)

@@ -21,9 +21,9 @@ CONFIGS_CSV="${SCRIPT_DIR}/param_configs.csv"
 OUTPUT_DIR="${SCRIPT_DIR}/test_outputs"
 LOG_DIR="${OUTPUT_DIR}/logs"
 
-N_SIMS=10
+N_SHOTS=10           # keep tiny for a quick smoke test
 GP_ITER=50           # fast GPR for the test
-AIM_OFFSET=0.0
+TEE_SAMPLES=10
 TEST_TASK_ID=0       # use the first (baseline) config
 
 TIME_LIMIT="00:15:00"
@@ -70,9 +70,9 @@ echo "=== Smoke test task \${SLURM_ARRAY_TASK_ID} started at \$(date) ==="
 python3 run_hpc_sensitivity.py \\
     --task-id     \${SLURM_ARRAY_TASK_ID} \\
     --configs-csv "${CONFIGS_CSV}" \\
-    --n-sims      ${N_SIMS} \\
+    --n-shots     ${N_SHOTS} \\
     --gp-iter     ${GP_ITER} \\
-    --aim-offset  ${AIM_OFFSET} \\
+    --tee-samples ${TEE_SAMPLES} \\
     --data-dir    "${DATA_DIR}" \\
     --output-dir  "${OUTPUT_DIR}"
 

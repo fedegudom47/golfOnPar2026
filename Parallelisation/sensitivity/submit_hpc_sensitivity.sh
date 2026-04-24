@@ -15,9 +15,9 @@
 # ---- USER CONFIGURATION -----------------------------------------------------
 REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"
 
-N_SIMS=1000            # full holes per configuration
-GP_ITER=100            # GPR training iterations (putting model)
-AIM_OFFSET=0.0         # lateral aim offset in yards (0 = aim at pin)
+N_SHOTS=280            # approach shots per (grid-point, club, aim) — matches convergence
+GP_ITER=100            # GPR training iterations (putting + approach GPR)
+TEE_SAMPLES=50         # samples per (club, aim) for tee shot evaluation
 
 TIME_LIMIT="06:00:00"  # wall time per task (sensitivity tasks are lighter than convergence)
 MEM_PER_CPU="8G"
@@ -76,9 +76,9 @@ echo "=== Sensitivity task \${SLURM_ARRAY_TASK_ID} / ${LAST_TASK}  started at \$
 python3 run_hpc_sensitivity.py \\
     --task-id     \${SLURM_ARRAY_TASK_ID} \\
     --configs-csv "${CONFIGS_CSV}" \\
-    --n-sims      ${N_SIMS} \\
+    --n-shots     ${N_SHOTS} \\
     --gp-iter     ${GP_ITER} \\
-    --aim-offset  ${AIM_OFFSET} \\
+    --tee-samples ${TEE_SAMPLES} \\
     --data-dir    "${DATA_DIR}" \\
     --output-dir  "${OUTPUT_DIR}"
 
@@ -87,4 +87,4 @@ EOF
 
 echo "Submitted: array 0-${LAST_TASK}  (${N_TASKS} tasks)"
 echo "Monitor:   squeue -u \$USER"
-echo "Outputs:   ${OUTPUT_DIR}/sim_output_dist*_disp*.csv"
+echo "Outputs:   ${OUTPUT_DIR}/sensitivity_dist*.csv  +  *.png"

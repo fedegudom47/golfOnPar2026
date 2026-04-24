@@ -1,0 +1,12 @@
+{
+  "task_id": 0,
+  "trend": 1,
+  "carry_shift": 0.0,
+  "variance_scale": 1.0,
+  "N": 10,
+  "n_grid_points": 280,
+  "mean_esho": 3.4265456438064574,
+  "best_tee_club": "Driver",
+  "best_tee_aim": 28.0,
+  "best_tee_strokes": 3.8914299488067625
+}
