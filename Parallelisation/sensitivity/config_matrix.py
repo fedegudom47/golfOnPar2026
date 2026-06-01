@@ -1,13 +1,15 @@
 """
-config_matrix.py – 24-row (carry_shift, variance_scale) configuration matrix.
+config_matrix.py – configuration matrix for sensitivity analysis.
 
-A 6 × 4 grid:
-  carry_shifts   : 0, 3, 6, 9, 12, 15 yards    (max +15 yds above baseline)
-  variance_scales: 1.0, 0.97, 0.94, 0.90        (baseline → 10 % tighter)
+Grid:
+  carry_shifts   : -9, -6, -3, 0, 3, 6, 9, 12, 15 yards
+                   (negative = shorter than baseline, positive = longer)
+  variance_scales: 0.80, 0.85, 0.90, 0.94, 0.97, 1.0, 1.03, 1.06, 1.09
+                   (< 1.0 = tighter/more accurate, > 1.0 = wider/less accurate)
 
 Each row is labelled with the trend it primarily illustrates:
-  Trend 1 – fixed dispersion (variance_scale = 1.0), increasing distance
-  Trend 2 – fixed distance (carry_shift = 0),  decreasing dispersion
+  Trend 1 – fixed dispersion (variance_scale = 1.0), distance varies
+  Trend 2 – fixed distance (carry_shift = 0),  dispersion varies
   Trend 3 – both vary simultaneously
 
 Usage:
@@ -27,8 +29,8 @@ import pandas as pd
 # Grid definition — edit here to change the sweep range
 # ---------------------------------------------------------------------------
 
-CARRY_SHIFTS:    list[float] = [0.0, 3.0, 6.0, 9.0, 12.0, 15.0]   # yards
-VARIANCE_SCALES: list[float] = [1.0, 0.97, 0.94, 0.90]             # multiplier
+CARRY_SHIFTS:    list[float] = [-9.0, -6.0, -3.0, 0.0, 3.0, 6.0, 9.0, 12.0, 15.0]   # yards
+VARIANCE_SCALES: list[float] = [0.80, 0.85, 0.90, 0.94, 0.97, 1.0, 1.03, 1.06, 1.09]  # multiplier
 
 
 def _trend(carry_shift: float, variance_scale: float) -> int:
@@ -49,9 +51,7 @@ def build_config_matrix() -> pd.DataFrame:
             "carry_shift":    cs,
             "variance_scale": vs,
         })
-    df = pd.DataFrame(rows)
-    assert len(df) == len(CARRY_SHIFTS) * len(VARIANCE_SCALES)
-    return df
+    return pd.DataFrame(rows)
 
 
 def get_config(task_id: int, df: pd.DataFrame | None = None) -> dict:
@@ -92,7 +92,7 @@ def main() -> None:
         print(f"  {int(row.task_id):>3}    {int(row.trend):>3}    "
               f"{row.carry_shift:>+8.1f} yd    {row.variance_scale:>10.2f}")
     print(f"\n  {len(df)} configurations  "
-          f"({len(CARRY_SHIFTS)} carry × {len(VARIANCE_SCALES)} variance)\n")
+          f"({len(CARRY_SHIFTS)} carry_shifts × {len(VARIANCE_SCALES)} variance_scales)\n")
 
     if not args.no_save:
         df.to_csv(args.output, index=False)
