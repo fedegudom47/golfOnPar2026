@@ -239,8 +239,8 @@ def build_hole_birdie(
     lpga_clubs = pd.read_csv(data_dir / "simulated_lpga_shot_data2.csv")
     club_distributions: dict = {}
     for club, group in lpga_clubs.groupby("Club"):
-        mu  = group[["Side", "Carry"]].mean().to_numpy()
-        cov = np.cov(group[["Side", "Carry"]].T)
+        mu  = group[["Side", "Carry"]].mean().to_numpy().copy()
+        cov = np.cov(group[["Side", "Carry"]].T).copy()
         # Fix Side-Carry correlation sign (see core.py for explanation).
         cov[0, 1] = abs(cov[0, 1])
         cov[1, 0] = abs(cov[1, 0])
