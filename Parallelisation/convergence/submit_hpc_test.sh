@@ -58,8 +58,7 @@ python3 run_hpc_worker.py \\
     --output-dir "${OUTPUT_DIR}" \\
     --n-start 10 \\
     --n-step  10 \\
-    --n-max   300 \\
-    --k       3 \\
+    --n-max   500 \\
     --early-stop-N 30 \\
     --gp-iter 50
 

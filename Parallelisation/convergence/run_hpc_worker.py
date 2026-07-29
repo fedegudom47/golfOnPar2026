@@ -20,14 +20,14 @@ Example (called by submit_hpc.sh):
         --seed $SLURM_ARRAY_TASK_ID \\
         --data-dir /path/to/repo/Parallelisation/data \\
         --output-dir /path/to/repo/Parallelisation/convergence/outputs \\
-        --n-max 300 --k 3 --n-step 10
+        --n-max 500 --n-step 10
 
 Example HPC test (called by submit_hpc_test.sh):
     python run_hpc_worker.py \\
         --seed $SLURM_ARRAY_TASK_ID \\
         --data-dir /path/to/repo/Parallelisation/data \\
         --output-dir /path/to/repo/Parallelisation/convergence/outputs_test \\
-        --n-max 300 --early-stop-N 30
+        --n-max 500 --early-stop-N 30
 """
 
 import argparse
@@ -56,9 +56,7 @@ def _parse_args() -> argparse.Namespace:
                    help="Root directory for outputs (seed sub-dirs + logs).")
     p.add_argument("--n-start",       type=int,   default=10)
     p.add_argument("--n-step",        type=int,   default=10)
-    p.add_argument("--n-max",         type=int,   default=300)
-    p.add_argument("--k",             type=int,   default=3,
-                   help="Consecutive identical snapshots required for convergence.")
+    p.add_argument("--n-max",         type=int,   default=500)
     p.add_argument("--aim-step",      type=float, default=2.0)
     p.add_argument("--gp-iter",       type=int,   default=100,
                    help="GPyTorch training iterations for the putting GPR.")
@@ -102,7 +100,6 @@ def main() -> None:
         n_start=args.n_start,
         n_step=args.n_step,
         n_max=args.n_max,
-        k=args.k,
         aim_step=args.aim_step,
         gp_training_iter=args.gp_iter,
         early_stop_N=args.early_stop_N,
@@ -117,7 +114,7 @@ def main() -> None:
 
     # Print a one-line summary to stdout (captured by Slurm .out file)
     print(json.dumps(asdict(result)))
-    logger.info("Worker finished.  convergence_N=%s", result.convergence_N)
+    logger.info("Worker finished.  n_iterations=%d  wall_time_s=%.1f", result.n_iterations, result.wall_time_s)
 
 
 if __name__ == "__main__":

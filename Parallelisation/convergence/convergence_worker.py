@@ -1,15 +1,21 @@
 """
-convergence_worker.py – Convergence study for one random seed.
+convergence_worker.py – Simulation sweep for one random seed.
 
-Algorithm
----------
-Starting from N = n_start shots per grid-point, we increase N by n_step
-each iteration and recompute the optimal strategy OPT_N(x, y) = (club,
-aim_offset) for every strategy point.  Convergence is declared when the
-last k consecutive OPT snapshots are identical for every grid point.
+This worker no longer declares convergence itself. A single arg-min
+(club*, aim*) per grid point is not a well-defined statistic when several
+(club, aim) combinations are statistically tied in expected outcome — at
+many grid points the arg-min oscillates forever even after the model has
+converged in every meaningful sense. Convergence is instead assessed as a
+post-processing step (see equivalence.py / run_equivalence_analysis.py)
+using equivalence sets of tied-best combinations, computed from the full
+per-candidate R(s,theta)/SE(s,theta) data this worker persists below.
 
-A PNG snapshot of the hole coloured by OPT is saved after every iteration
-so you can see the strategy stabilise visually.
+So this worker simply sweeps N = n_start, n_start+n_step, ..., n_max shots
+per grid point and, at every N, saves:
+  - the arg-min snapshot (optimal_results) as before, for plotting/back-compat
+  - every (grid-point, club, aim) candidate's R(s,theta)=mean and
+    SE(s,theta)=sqrt(var/n_total), as a parquet file, for the equivalence-set
+    post-processing layer.
 
 Usage (direct):
     python convergence_worker.py --seed 0 --data-dir ../data --output-dir ./outputs
@@ -21,12 +27,13 @@ import argparse
 import json
 import logging
 import time
-from collections import Counter, deque
+from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 
 # Local import – workers are run from inside the convergence/ directory
 from core import HoleData, build_hole, plot_optimal_approaches, results_to_dataframe, simulate_approach_shots
@@ -40,11 +47,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WorkerConfig:
-    """All tunable parameters for the convergence study."""
+    """All tunable parameters for the simulation sweep."""
     n_start: int   = 10       # initial shots per grid point
     n_step: int    = 10       # additional shots per iteration
-    n_max: int     = 300      # give up if N exceeds this
-    k: int         = 3        # consecutive identical snapshots required
+    n_max: int     = 500      # sweep runs to this N (no early stopping — see equivalence.py)
     aim_range: tuple[float, float] = (-20.0, 20.0)
     aim_step: float = 2.0
     gp_training_iter: int = 100
@@ -54,16 +60,14 @@ class WorkerConfig:
 
 
 # ---------------------------------------------------------------------------
-# Convergence result
+# Sweep result
 # ---------------------------------------------------------------------------
 
 @dataclass
 class ConvergenceResult:
     seed: int
-    convergence_N: Optional[int]   # None → did not converge within n_max
     n_iterations: int
     wall_time_s: float
-    did_not_converge: bool
     stopped_early: bool
 
 
@@ -71,26 +75,7 @@ class ConvergenceResult:
 # Helpers
 # ---------------------------------------------------------------------------
 
-AIM_TOLERANCE: float = 1.0  # yards — two aim offsets are "equal" within this
-
-
-def _opt_key(result: dict) -> tuple[str, int]:
-    """Hashable key for one grid-point's optimal decision."""
-    return (result["club"], int(round(result["aim_offset"])))
-
-
-def _build_snapshot(optimal_results: list[dict]) -> dict[tuple, tuple[str, int]]:
-    """Map start_point → (club, aim_offset_int) for the full grid."""
-    return {r["start"]: _opt_key(r) for r in optimal_results}
-
-
-def _snapshots_agree(history: deque) -> bool:
-    """Return True iff all snapshots in the deque are identical."""
-    first = history[0]
-    for snap in history:
-        if snap != first:
-            return False
-    return True
+AIM_TOLERANCE: float = 1.0  # yards — two aim offsets are "equal" within this (arg-min match-rate diagnostic only)
 
 
 def _compute_match_rate(
@@ -171,6 +156,37 @@ def _save_snapshot_plot(
     )
 
 
+def _save_candidates(
+    seed: int,
+    N: int,
+    all_candidates: list[dict],
+    output_dir: Path,
+) -> None:
+    """Save every (grid-point, club, aim) candidate's R(s,theta)/n_total this N.
+
+    This is the full per-candidate data the equivalence-set post-processing
+    layer (equivalence.py) needs — SE(s,theta) = sqrt(var/n_total) is derived
+    from these columns, not stored directly.
+    """
+    path = output_dir / f"seed{seed:04d}_N{N:04d}_candidates.parquet"
+    df = pd.DataFrame([
+        {
+            "x": float(c["start"][0]),
+            "y": float(c["start"][1]),
+            "club": c["club"],
+            "aim_offset": float(c["aim_offset"]),
+            "mean": float(c["mean"]),
+            "var": float(c["var"]),
+            "n_total": int(c["n_total"]),
+            "seed": seed,
+            "N": N,
+        }
+        for c in all_candidates
+    ])
+    df.to_parquet(path, index=False)
+    logger.info("Saved candidates parquet → %s (%d rows)", path, len(df))
+
+
 def _save_result_json(result: ConvergenceResult, output_dir: Path) -> None:
     path = output_dir / f"seed{result.seed:04d}_result.json"
     with open(path, "w") as f:
@@ -188,10 +204,13 @@ def run_convergence(
     data_dir: Path,
     output_dir: Path,
 ) -> ConvergenceResult:
-    """Run the convergence study for `seed`.
+    """Run the full N-sweep simulation for `seed`.
 
-    Returns a ConvergenceResult and saves PNGs + a JSON result file under
-    `output_dir / seed{seed:04d}/`.
+    Sweeps N = n_start, n_start+n_step, ..., n_max (no convergence stopping —
+    that is now assessed as post-processing, see equivalence.py). Saves, at
+    every N: the arg-min snapshot CSV/PNG (as before, for plotting/back-compat)
+    and a full per-candidate parquet (R(s,theta), n_total for every club/aim
+    combo) that the equivalence-set analysis consumes.
     """
     seed_dir = output_dir / f"seed{seed:04d}"
     seed_dir.mkdir(parents=True, exist_ok=True)
@@ -222,15 +241,12 @@ def run_convergence(
     )
     logger.info("Hole ready. %d strategy points.", len(hole.strategy_points))
 
-    history: deque[dict] = deque(maxlen=config.k)
-    prev_results: Optional[list[dict]] = None  # for match rate computation
+    prev_results: Optional[list[dict]] = None  # for the arg-min match-rate diagnostic only
     accumulator: Optional[dict] = None          # accumulated shot strokes across iterations
 
     N = config.n_start   # total shots accumulated so far (for logging / CSV label)
     n_iterations = 0
-    did_not_converge = False
     stopped_early = False
-    convergence_N: Optional[int] = None
 
     while True:
         iter_t0 = time.monotonic()
@@ -238,13 +254,16 @@ def run_convergence(
         n_new = config.n_start if n_iterations == 0 else config.n_step
         logger.info("--- Iteration %d  N_total=%d  (+%d new shots) ---", n_iterations, N, n_new)
 
-        # Simulate ONLY the new shots; merge with accumulator internally
-        optimal_results, accumulator = simulate_approach_shots(
+        # Simulate ONLY the new shots; merge with accumulator internally.
+        # return_all_candidates=True also gives us every (club, aim) candidate's
+        # R(s,theta)/n_total, not just the arg-min, for the equivalence-set layer.
+        optimal_results, accumulator, all_candidates = simulate_approach_shots(
             hole=hole,
             n_new=n_new,
             accumulator=accumulator,
             aim_range=config.aim_range,
             aim_step=config.aim_step,
+            return_all_candidates=True,
         )
 
         logger.info(
@@ -253,24 +272,23 @@ def run_convergence(
             time.monotonic() - iter_t0,
         )
 
-        # Compute match rate against previous iteration
+        # Arg-min match rate vs previous iteration — retained only as a diagnostic
+        # (it is NOT used to declare convergence; see equivalence.py for that).
         match_rate: Optional[float] = None
         if prev_results is not None:
             match_rate = _compute_match_rate(optimal_results, prev_results)
-            logger.info("  Match rate vs N=%d: %.1f%%", N - config.n_step, match_rate * 100)
+            logger.info("  Arg-min match rate vs N=%d: %.1f%%", N - config.n_step, match_rate * 100)
 
         # Log club distribution
         club_counts = Counter(r["club"] for r in optimal_results)
         logger.info("  Club distribution: %s", dict(club_counts.most_common()))
 
-        # Save per-iteration CSV and PNG (normal, non-converged)
+        # Save per-iteration outputs
         _save_csv(seed, N, optimal_results, seed_dir)
+        _save_candidates(seed, N, all_candidates, seed_dir)
         _append_match_log(seed, N, match_rate, seed_dir)
         _save_snapshot_plot(seed, N, optimal_results, hole, seed_dir, match_rate=match_rate)
 
-        # Store snapshot in rolling history
-        snap = _build_snapshot(optimal_results)
-        history.append(snap)
         prev_results = optimal_results
 
         # Check for early stop (test mode)
@@ -279,23 +297,8 @@ def run_convergence(
             stopped_early = True
             break
 
-        # Check convergence
-        if len(history) == config.k and _snapshots_agree(history):
-            convergence_N = N
-            logger.info(
-                "CONVERGED at N=%d after %d iterations  (%.1fs total).",
-                N, n_iterations, time.monotonic() - t0,
-            )
-            # Overwrite the final PNG with a CONVERGED-tagged copy
-            _save_snapshot_plot(seed, N, optimal_results, hole, seed_dir,
-                                 converged=True, match_rate=match_rate)
-            _save_csv(seed, N, optimal_results, seed_dir, converged=True)
-            break
-
-        # Check whether we have exhausted our budget
         if N >= config.n_max:
-            logger.warning("Did NOT converge within n_max=%d.", config.n_max)
-            did_not_converge = True
+            logger.info("Sweep complete at n_max=%d.", config.n_max)
             break
 
         N += config.n_step   # track total accumulated shots for logging
@@ -304,10 +307,8 @@ def run_convergence(
     wall_time = time.monotonic() - t0
     result = ConvergenceResult(
         seed=seed,
-        convergence_N=convergence_N,
         n_iterations=n_iterations,
         wall_time_s=wall_time,
-        did_not_converge=did_not_converge,
         stopped_early=stopped_early,
     )
     _save_result_json(result, seed_dir)
@@ -330,8 +331,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir",    type=Path, default=Path("outputs"))
     p.add_argument("--n-start",       type=int,   default=10)
     p.add_argument("--n-step",        type=int,   default=10)
-    p.add_argument("--n-max",         type=int,   default=300)
-    p.add_argument("--k",             type=int,   default=3)
+    p.add_argument("--n-max",         type=int,   default=500)
     p.add_argument("--aim-step",      type=float, default=2.0)
     p.add_argument("--gp-iter",       type=int,   default=100)
     p.add_argument("--early-stop-N",  type=int,   default=None,
@@ -352,7 +352,6 @@ if __name__ == "__main__":
         n_start=args.n_start,
         n_step=args.n_step,
         n_max=args.n_max,
-        k=args.k,
         aim_step=args.aim_step,
         gp_training_iter=args.gp_iter,
         early_stop_N=args.early_stop_N,

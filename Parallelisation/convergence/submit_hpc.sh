@@ -20,11 +20,11 @@ REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"              # <-- CHANGE THIS
 # Number of seeds to run (array indices 0 … N_SEEDS-1)
 N_SEEDS=100
 
-# Convergence parameters
+# Simulation sweep parameters (convergence is assessed afterward as
+# post-processing — see run_equivalence_analysis.py)
 N_START=10
 N_STEP=10
-N_MAX=300
-K=3                  # consecutive stable snapshots required
+N_MAX=500
 AIM_STEP=2.0
 GP_ITER=100
 
@@ -81,7 +81,6 @@ python3 run_hpc_worker.py \\
     --n-start ${N_START} \\
     --n-step  ${N_STEP}  \\
     --n-max   ${N_MAX}   \\
-    --k       ${K}       \\
     --aim-step ${AIM_STEP} \\
     --gp-iter  ${GP_ITER}
 

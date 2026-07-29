@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# monitor.sh – Live progress dashboard for the convergence study
+# monitor.sh – Live progress dashboard for the simulation sweep
 #
 # Works both locally (run_local.py outputs) and on the HPC (Slurm outputs).
 #
@@ -9,9 +9,16 @@
 #   bash monitor.sh ./outputs_test         # HPC test run
 #   bash monitor.sh /path/to/outputs       # explicit path
 #
+# Note: the worker no longer declares convergence itself (arg-min tracking
+# oscillates even once the model has converged in any meaningful sense) — it
+# just sweeps N=10..300 and persists per-candidate data. Convergence is
+# assessed afterward by run_equivalence_analysis.py. This dashboard reports
+# sweep completion (DONE/RUNNING/EARLY STOP) and candidate-file counts, not
+# convergence status.
+#
 # What it shows:
-#   - How many seeds are DONE / CONVERGED / DID NOT CONVERGE / EARLY STOP
-#   - Distribution of convergence N across finished seeds
+#   - How many seeds are DONE / RUNNING / STOPPED EARLY
+#   - Candidate-parquet file counts (inputs to the equivalence-set analysis)
 #   - Last few log lines for seeds still running (useful while jobs are live)
 #   - Slurm job array status (if squeue is available)
 # =============================================================================
@@ -63,27 +70,12 @@ echo -e "${CYAN}  Seeds with output dirs : ${n_seed_dirs}${RESET}"
 echo -e "${CYAN}  Seeds with result.json : ${n_done}${RESET}"
 
 # ---------------------------------------------------------------------------
-# Parse convergence_N from finished JSONs
+# Parse sweep status from finished JSONs, and count candidate parquet files
 # ---------------------------------------------------------------------------
-converged_ns=()
-n_not_conv=0
 n_early=0
 
 for f in "${OUTPUT_DIR}"/seed*/seed*_result.json; do
     [ -f "$f" ] || continue
-
-    # Extract convergence_N (could be null)
-    conv_n=$(python3 -c "
-import json, sys
-d = json.load(open('${f}'))
-print(d.get('convergence_N', 'null'))
-" 2>/dev/null)
-
-    did_not=$(python3 -c "
-import json, sys
-d = json.load(open('${f}'))
-print(d.get('did_not_converge', False))
-" 2>/dev/null)
 
     early=$(python3 -c "
 import json, sys
@@ -91,68 +83,40 @@ d = json.load(open('${f}'))
 print(d.get('stopped_early', False))
 " 2>/dev/null)
 
-    if [ "${conv_n}" != "null" ] && [ -n "${conv_n}" ]; then
-        converged_ns+=("${conv_n}")
-    fi
-    [ "${did_not}" = "True" ] && n_not_conv=$(( n_not_conv + 1 ))
-    [ "${early}"   = "True" ] && n_early=$(( n_early + 1 ))
+    [ "${early}" = "True" ] && n_early=$(( n_early + 1 ))
 done
 
-n_converged=${#converged_ns[@]}
+n_candidate_files=$(ls "${OUTPUT_DIR}"/seed*/seed*_candidates.parquet 2>/dev/null | wc -l | tr -d ' ')
 
 echo ""
-echo -e "  ${GREEN}Converged          : ${n_converged}${RESET}"
-echo -e "  ${RED}Did not converge   : ${n_not_conv}${RESET}"
-echo -e "  ${YELLOW}Stopped early      : ${n_early}${RESET}"
-
-if [ "${n_converged}" -gt 0 ]; then
-    # Python one-liner for statistics
-    ns_str=$(IFS=','; echo "${converged_ns[*]}")
-    python3 - "${ns_str}" <<'PYEOF'
-import sys, statistics
-vals = list(map(int, sys.argv[1].split(',')))
-vals.sort()
-print(f"\n  Convergence N distribution over {len(vals)} seeds:")
-print(f"    min    = {min(vals)}")
-print(f"    max    = {max(vals)}")
-print(f"    mean   = {statistics.mean(vals):.1f}")
-print(f"    median = {statistics.median(vals):.1f}")
-if len(vals) > 1:
-    print(f"    stdev  = {statistics.stdev(vals):.1f}")
-print(f"    values = {vals}")
-PYEOF
-fi
+echo -e "  ${GREEN}Finished (sweep complete) : ${n_done}${RESET}"
+echo -e "  ${YELLOW}Stopped early             : ${n_early}${RESET}"
+echo -e "  ${CYAN}Candidate parquet files   : ${n_candidate_files}${RESET}  (input to run_equivalence_analysis.py)"
 
 # ---------------------------------------------------------------------------
 # Per-seed status table: PNGs, convergence, latest match rate
 # ---------------------------------------------------------------------------
 echo ""
 echo -e "${BOLD}  Per-seed status:${RESET}"
-printf "  %-14s  %-6s  %-12s  %-10s  %s\n" "Seed" "PNGs" "Status" "Conv N" "Match rate history (N: rate%)"
-printf "  %-14s  %-6s  %-12s  %-10s  %s\n" "----" "----" "------" "------" "-----------------------------"
+printf "  %-14s  %-6s  %-12s  %-10s  %s\n" "Seed" "PNGs" "Status" "N cand." "Arg-min match rate history (diagnostic only)"
+printf "  %-14s  %-6s  %-12s  %-10s  %s\n" "----" "----" "------" "-------" "---------------------------------------------"
 
 for sdir in "${OUTPUT_DIR}"/seed*; do
     [ -d "$sdir" ] || continue
     seed_name=$(basename "$sdir")
     n_png=$(ls "${sdir}"/*.png 2>/dev/null | wc -l | tr -d ' ')
+    n_cand=$(ls "${sdir}"/*_candidates.parquet 2>/dev/null | wc -l | tr -d ' ')
     result_json="${sdir}/${seed_name}_result.json"
     match_tsv="${sdir}/${seed_name}_match_rate.tsv"
 
-    # Status + convergence N
     if [ -f "${result_json}" ]; then
-        status_conv=$(python3 -c "
+        status=$(python3 -c "
 import json
 d = json.load(open('${result_json}'))
-n = d.get('convergence_N', None)
-s = 'CONVERGED' if n is not None else ('EARLY' if d.get('stopped_early') else 'NOT CONV')
-print(f'{s}|{n}')
+print('EARLY STOP' if d.get('stopped_early') else 'DONE')
 " 2>/dev/null)
-        status="${status_conv%%|*}"
-        conv_n="${status_conv##*|}"
-        [ "${conv_n}" = "None" ] && conv_n="-"
     else
         status="running"
-        conv_n="-"
     fi
 
     # Match rate history from TSV
@@ -168,7 +132,7 @@ print('  '.join(parts) if parts else 'no comparisons yet')
     fi
 
     printf "  %-14s  %-6s  %-12s  %-10s  %s\n" \
-        "${seed_name}" "${n_png}" "${status}" "${conv_n}" "${match_history}"
+        "${seed_name}" "${n_png}" "${status}" "${n_cand}" "${match_history}"
 done
 
 # ---------------------------------------------------------------------------

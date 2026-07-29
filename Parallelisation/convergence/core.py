@@ -479,7 +479,8 @@ def simulate_approach_shots(
     strategy_points: Optional[list] = None,
     aim_range: tuple[float, float] = (-20.0, 20.0),
     aim_step: float = 2.0,
-) -> tuple[list[dict], StrokesAccumulator]:
+    return_all_candidates: bool = False,
+) -> tuple[list[dict], StrokesAccumulator] | tuple[list[dict], StrokesAccumulator, list[dict]]:
     """Simulate `n_new` additional shots per (grid-point, club, aim) combo.
 
     Shots accumulate across calls via `accumulator`.  On the first call pass
@@ -497,6 +498,10 @@ def simulate_approach_shots(
         `n_total` is the accumulated shot count for the winning (club, aim).
     new_accumulator : StrokesAccumulator
         Updated dict to pass into the next call.
+    all_candidates : list[dict], only if return_all_candidates=True
+        Every (grid-point, club, aim) combo evaluated this call, with the same
+        keys as `optimal_results` — i.e. R(s,theta)=mean and n_total (so
+        SE(s,theta)=sqrt(var/n_total)) for every candidate, not just the winner.
     """
     if strategy_points is None:
         strategy_points = hole.strategy_points
@@ -514,6 +519,7 @@ def simulate_approach_shots(
 
     new_accumulator: StrokesAccumulator = {}
     optimal_results: list[dict] = []
+    all_candidates: list[dict] = []
 
     for starting_point in strategy_points:
         starting_lie = get_lie_category(starting_point, hole)
@@ -576,19 +582,25 @@ def simulate_approach_shots(
                 mean_val = float(np.mean(combined)) + penalty
                 var_val  = float(np.var(combined))
 
+                candidate = {
+                    "start":      starting_point,
+                    "club":       club,
+                    "aim_offset": float(aim_offset),
+                    "mean":       mean_val,
+                    "var":        var_val,
+                    "n_total":    int(len(combined)),
+                }
+                if return_all_candidates:
+                    all_candidates.append(candidate)
+
                 if best_res is None or mean_val < best_res["mean"]:
-                    best_res = {
-                        "start":      starting_point,
-                        "club":       club,
-                        "aim_offset": float(aim_offset),
-                        "mean":       mean_val,
-                        "var":        var_val,
-                        "n_total":    int(len(combined)),
-                    }
+                    best_res = candidate
 
         if best_res is not None:
             optimal_results.append(best_res)
 
+    if return_all_candidates:
+        return optimal_results, new_accumulator, all_candidates
     return optimal_results, new_accumulator
 
 
