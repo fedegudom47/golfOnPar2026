@@ -65,6 +65,7 @@ pip install \
     gpytorch \
     numpy \
     pandas \
+    pyarrow \
     matplotlib \
     scipy \
     geopandas \
@@ -75,11 +76,12 @@ pip install \
 echo ""
 echo "--- Installed package versions ---"
 python3 -c "
-import torch, gpytorch, numpy, pandas, matplotlib, scipy, geopandas, shapely
+import torch, gpytorch, numpy, pandas, pyarrow, matplotlib, scipy, geopandas, shapely
 print(f'  torch      {torch.__version__}')
 print(f'  gpytorch   {gpytorch.__version__}')
 print(f'  numpy      {numpy.__version__}')
 print(f'  pandas     {pandas.__version__}')
+print(f'  pyarrow    {pyarrow.__version__}')
 print(f'  matplotlib {matplotlib.__version__}')
 print(f'  geopandas  {geopandas.__version__}')
 print(f'  shapely    {shapely.__version__}')
