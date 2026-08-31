@@ -477,8 +477,8 @@ def simulate_approach_shots(
     n_new: int,
     accumulator: Optional[StrokesAccumulator] = None,
     strategy_points: Optional[list] = None,
-    aim_range: tuple[float, float] = (-20.0, 20.0),
-    aim_step: float = 2.0,
+    aim_range: tuple[float, float] = (-40.0, 40.0),
+    aim_step: float = 5.0,
     return_all_candidates: bool = False,
 ) -> tuple[list[dict], StrokesAccumulator] | tuple[list[dict], StrokesAccumulator, list[dict]]:
     """Simulate `n_new` additional shots per (grid-point, club, aim) combo.
@@ -536,14 +536,19 @@ def simulate_approach_shots(
             np.array(target) - np.array(playing_location)
         ))
 
-        # Top-5 clubs by carry proximity; Driver excluded — approach shots only
-        top_clubs = [
-            club for club, _ in sorted(
-                ((c, abs(carry - total_distance)) for c, carry in clubs_avg_carry.items()
-                 if c != "Driver"),
-                key=lambda x: x[1],
-            )[:5]
-        ]
+        # Club shortlist (Driver always excluded — approach shots only).
+        # For long approaches (> 150 yd to the pin) the carry-proximity heuristic
+        # is unreliable, so evaluate every non-Driver club; for shorter shots keep
+        # the 5 clubs whose mean carry is closest to the distance to the pin.
+        candidate_clubs = sorted(
+            ((c, abs(carry - total_distance)) for c, carry in clubs_avg_carry.items()
+             if c != "Driver"),
+            key=lambda x: x[1],
+        )
+        if total_distance > 150.0:
+            top_clubs = [c for c, _ in candidate_clubs]
+        else:
+            top_clubs = [c for c, _ in candidate_clubs[:5]]
 
         best_res: Optional[dict] = None
 

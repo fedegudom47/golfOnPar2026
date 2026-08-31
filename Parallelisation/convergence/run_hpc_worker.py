@@ -57,9 +57,13 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--n-start",       type=int,   default=10)
     p.add_argument("--n-step",        type=int,   default=10)
     p.add_argument("--n-max",         type=int,   default=500)
-    p.add_argument("--aim-step",      type=float, default=2.0)
+    p.add_argument("--aim-step",      type=float, default=5.0)
     p.add_argument("--gp-iter",       type=int,   default=100,
                    help="GPyTorch training iterations for the putting GPR.")
+    p.add_argument("--equiv-e",       type=float, default=1.0,
+                   help="SE multiplier for the equivalence band.")
+    p.add_argument("--k-consecutive", type=int,   default=3,
+                   help="Consecutive Jaccard==1 snapshots for a grid point to count as stabilised.")
     p.add_argument("--early-stop-N",  type=int,   default=None,
                    help="Stop after this N (HPC test mode).")
     p.add_argument("--log-level",     default="INFO")
@@ -102,6 +106,8 @@ def main() -> None:
         n_max=args.n_max,
         aim_step=args.aim_step,
         gp_training_iter=args.gp_iter,
+        equiv_e=args.equiv_e,
+        k_consecutive=args.k_consecutive,
         early_stop_N=args.early_stop_N,
     )
 

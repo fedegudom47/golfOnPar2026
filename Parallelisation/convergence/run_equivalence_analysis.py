@@ -1,32 +1,22 @@
 """
-run_equivalence_analysis.py – Post-processing: equivalence-set convergence.
+run_equivalence_analysis.py – Post-processing: aggregate the per-seed
+equivalence-set / stabilisation results the HPC workers now compute live.
 
-Consumes the per-(seed, N) candidate parquet files written by
-convergence_worker.py (one row per grid-point/club/aim combo, with R(s,theta)
-= mean and n_total, so SE(s,theta) = sqrt(var/n_total)) across the existing
-100-seed x N=10..500-step-10 x M=280-grid-point sweep. Does NOT resimulate —
-purely reads the already-computed sweep and applies the equivalence-set
-definitions in equivalence.py, swept over e in {1.0, 1.645, 2.0}.
+The workers (convergence_worker.py) already:
+  * store E*(g, seed, N) — the 1-SE equivalence set — per (seed, N) as
+    seed{SEED}/seed{SEED}_N{N}_equivset.parquet
+  * track within-seed stabilisation (Test 1) live and log it to
+    seed{SEED}/seed{SEED}_stabilisation.tsv + seed{SEED}_result.json
 
-The sweep always runs to n_max (default 500) — there is no live stopping rule.
-A (grid point, seed) pair that never hits k_consecutive stable Jaccard steps
-by n_max is reported, not silently dropped: its `stop_reason` is
-"reached_n_max_no_stability" (vs "converged"), and it shows up in
-equiv_non_converged_gridpoints_e{e}.csv.
+This script does NOT resimulate. It:
+  (a) re-derives per-(grid point, seed) stabilisation from the stored equivset
+      series (so you get converged_N and |E*| at n_max in one table)
+  (b) pools the stabilisation logs across seeds -> % of (grid point, seed)
+      pairs stabilised vs N, and per-seed "reached 100%?" booleans
+  (c) computes cross-seed core/union agreement per (grid point, N)
+  (d) draws a spatial map of mean |E*| across seeds
 
-Outputs, per e:
-  (a) equiv_seq_e{e}.csv                    – per-grid-point/seed: converged_N (or None),
-                                               |E*| at convergence/n_max, stop_reason
-  (b) equiv_cross_seed_e{e}.csv             – per-grid-point core/union set size + full-agreement vs N
-  (c) equiv_match_rate_summary.png          – mean sequential Jaccard match rate vs N, one curve per e
-  (d) equiv_size_at_convergence_e{e}.png    – distribution of |E*| at convergence, converged pairs only
-  (e) equiv_non_converged_gridpoints_e{e}.csv – which grid points didn't stabilise by n_max, how many
-                                               seeds, and how large |E*| was stuck at there
-  (f) equiv_spatial_map_e{e}.png            – hole-layout scatter, one point per grid point, coloured
-                                               by mean |E*| across seeds — WHERE the ambiguity is on the hole
-
-Plus one overall table: equiv_overall_summary.csv (% converged / not converged by n_max,
-mean/median |E*| at convergence, per e).
+For the pairwise cross-seed Jaccard matrices, see cross_seed_jaccard.py.
 
 Usage:
     python run_equivalence_analysis.py --output-dir outputs --n-seeds 100 \
@@ -48,10 +38,9 @@ import pandas as pd
 from equivalence import (
     EquivalenceConfig,
     SequentialState,
-    compute_equivalence_sets,
     cross_seed_core_stats,
     grid_level_summary,
-    load_candidates,
+    load_equivset,
     non_converged_report,
     summarize_sequential,
 )
@@ -59,45 +48,40 @@ from equivalence import (
 logger = logging.getLogger(__name__)
 
 
-def _candidate_path(output_dir: Path, seed: int, N: int) -> Path:
-    return output_dir / f"seed{seed:04d}" / f"seed{seed:04d}_N{N:04d}_candidates.parquet"
+def _equivset_path(output_dir: Path, seed: int, N: int) -> Path:
+    return output_dir / f"seed{seed:04d}" / f"seed{seed:04d}_N{N:04d}_equivset.csv"
 
 
-def plot_equivalence_spatial_map(
-    e_seq: pd.DataFrame,
-    hole,
-    e: float,
-    n_max: int,
-    output_path: Path,
-) -> None:
-    """Hole-layout scatter of grid points coloured by mean |E*| across seeds.
+def collect_stabilisation_logs(output_dir: Path, n_seeds: int) -> pd.DataFrame:
+    """Concatenate every seed's seed{SEED}_stabilisation.tsv."""
+    frames = []
+    for seed in range(n_seeds):
+        p = output_dir / f"seed{seed:04d}" / f"seed{seed:04d}_stabilisation.tsv"
+        if not p.exists():
+            continue
+        df = pd.read_csv(p, sep="\t")
+        df["seed"] = seed
+        frames.append(df)
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
-    This is the key spatial finding: not just how many grid points are
-    ambiguous, but WHERE on the hole the tied-best-strategy sets are large
-    (e.g. a wide fairway landing zone where many club/aim combos score the
-    same) vs small (a tight pin position with one clearly-best play).
-    """
+
+def plot_equivalence_spatial_map(seq_df: pd.DataFrame, hole, n_max: int, output_path: Path) -> None:
     from core import plot_hole_layout
 
     per_gp = (
-        e_seq.groupby(["x", "y"])["equiv_set_size_final"]
-        .mean()
-        .reset_index(name="mean_equiv_set_size")
+        seq_df.groupby(["x", "y"])["equiv_set_size_final"]
+        .mean().reset_index(name="mean_equiv_set_size")
     )
-
     fig, ax = plt.subplots(figsize=(11, 13))
     plot_hole_layout(hole, title="", plot_strategy_points=False, ax=ax)
-
-    sizes = per_gp["mean_equiv_set_size"].to_numpy()
     sc = ax.scatter(
-        per_gp["x"], per_gp["y"],
-        c=sizes, cmap="RdYlGn_r", s=60, alpha=0.9,
-        edgecolors="black", linewidths=0.5, zorder=20,
+        per_gp["x"], per_gp["y"], c=per_gp["mean_equiv_set_size"],
+        cmap="RdYlGn_r", s=60, alpha=0.9, edgecolors="black", linewidths=0.5, zorder=20,
     )
     cbar = fig.colorbar(sc, ax=ax)
     cbar.set_label("Mean |E*| across seeds (# statistically tied-best club/aim combos)")
     ax.set_title(
-        f"Strategic ambiguity by grid point — e={e}, at convergence or N={n_max}\n"
+        f"Strategic ambiguity by grid point — e=1, at convergence or N={n_max}\n"
         "(green = one clearly-best play, red = many genuinely-tied options)"
     )
     fig.tight_layout()
@@ -115,152 +99,114 @@ def run_analysis(
     make_spatial_map: bool = True,
 ) -> None:
     results_dir.mkdir(parents=True, exist_ok=True)
-
-    hole = None
-    if make_spatial_map:
-        try:
-            from core import build_hole
-            # gp_training_iter=1: geometry/polygons are all this plot needs —
-            # the putting GPR itself is never queried, so skip real training cost.
-            hole = build_hole(data_dir, gp_training_iter=1)
-        except Exception:
-            logger.warning(
-                "Could not build hole geometry (data files unavailable?) — "
-                "skipping spatial equivalence maps.", exc_info=True,
-            )
-
-    seq_states: dict[tuple, SequentialState] = {}
-    cross_rows: list[dict] = []
     n_values = list(range(config.n_start, config.n_max + 1, config.n_step))
 
+    # ---- (b) pooled stabilisation logs -----------------------------------
+    stab = collect_stabilisation_logs(output_dir, n_seeds)
+    if not stab.empty:
+        stab.to_csv(results_dir / "stabilisation_all_seeds.csv", index=False)
+        per_N = stab.groupby("N").agg(
+            mean_pct_stable_ever=("pct_stable_ever", "mean"),
+            mean_pct_stable_now=("pct_stable_now", "mean"),
+            mean_pct_equiv_size1=("pct_equiv_size1", "mean"),
+            mean_jaccard_vs_prev=("mean_jaccard_vs_prev", "mean"),
+            n_seeds=("seed", "nunique"),
+        ).reset_index()
+        per_N.to_csv(results_dir / "stabilisation_vs_N.csv", index=False)
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.plot(per_N["N"], per_N["mean_pct_stable_ever"] * 100, marker="o",
+                label="% points ever stabilised")
+        ax.plot(per_N["N"], per_N["mean_pct_equiv_size1"] * 100, marker="s",
+                label="% points with |E*| = 1")
+        ax.plot(per_N["N"], per_N["mean_jaccard_vs_prev"] * 100, marker="^",
+                label="mean Jaccard vs prev N (%)")
+        ax.set_xlabel("N (shots per grid point)")
+        ax.set_ylabel("% (mean across seeds)")
+        ax.set_title("Within-seed stabilisation vs N")
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(results_dir / "stabilisation_vs_N.png", dpi=120)
+        plt.close(fig)
+
+    # ---- (a) re-derive per-(grid point, seed) stabilisation -------------
+    seq_states: dict[tuple, SequentialState] = {}
+    cross_rows: list[dict] = []
+
     for N in n_values:
-        # (grid point, e) -> list of theta-binned (cross-seed tolerance) sets, one per seed
-        pooled_cross: dict[tuple, list] = {}
-        n_seeds_loaded = 0
-
+        pooled: dict[tuple, list] = {}
+        loaded = 0
         for seed in range(n_seeds):
-            path = _candidate_path(output_dir, seed, N)
-            if not path.exists():
+            p = _equivset_path(output_dir, seed, N)
+            if not p.exists():
                 continue
-            n_seeds_loaded += 1
-            df = load_candidates(path)
-
-            sets_within = compute_equivalence_sets(df, config.e_values, config.aim_tol_within)
-            sets_cross = compute_equivalence_sets(df, config.e_values, config.aim_tol_cross)
-
-            for gp, per_e in sets_within.items():
-                for e, info in per_e.items():
-                    key = (gp, seed, e)
-                    st = seq_states.setdefault(key, SequentialState())
-                    st.update(N, info["set"], config.k_consecutive, config.jaccard_threshold)
-
-            for gp, per_e in sets_cross.items():
-                for e, info in per_e.items():
-                    pooled_cross.setdefault((gp, e), []).append(info["set"])
-
-        logger.info("N=%d: loaded %d/%d seeds", N, n_seeds_loaded, n_seeds)
-
-        for (gp, e), seed_sets in pooled_cross.items():
-            stats = cross_seed_core_stats(seed_sets)
-            cross_rows.append({"x": gp[0], "y": gp[1], "e": e, "N": N, **stats})
+            loaded += 1
+            sets = load_equivset(p)
+            for gp, eqset in sets.items():
+                st = seq_states.setdefault((gp, seed), SequentialState())
+                st.update(N, eqset, config.k_consecutive, config.jaccard_threshold)
+                pooled.setdefault(gp, []).append(eqset)
+        logger.info("N=%d: loaded %d/%d seeds", N, loaded, n_seeds)
+        for gp, seed_sets in pooled.items():
+            cross_rows.append({
+                "x": gp[0], "y": gp[1], "N": N, **cross_seed_core_stats(seed_sets),
+            })
 
     seq_df = summarize_sequential(seq_states)
     cross_df = pd.DataFrame(cross_rows)
+    seq_df.to_csv(results_dir / "equiv_sequential.csv", index=False)
+    cross_df.to_csv(results_dir / "equiv_cross_seed.csv", index=False)
 
-    seq_df.to_csv(results_dir / "equiv_sequential_all_e.csv", index=False)
-    cross_df.to_csv(results_dir / "equiv_cross_seed_all_e.csv", index=False)
+    n_grid_points = seq_df[["x", "y"]].drop_duplicates().shape[0]
+    summary = grid_level_summary(seq_df, n_grid_points)
+    pd.DataFrame([summary]).to_csv(results_dir / "equiv_overall_summary.csv", index=False)
 
-    overall_rows = []
-    match_rate_curves: dict[float, pd.Series] = {}
+    non_conv = non_converged_report(seq_df)
+    non_conv.to_csv(results_dir / "equiv_non_converged_gridpoints.csv", index=False)
+    logger.info(
+        "%d/%d grid points have >=1 seed that reached n_max=%d without stabilising.",
+        len(non_conv), n_grid_points, config.n_max,
+    )
 
-    for e in config.e_values:
-        e_seq = seq_df[seq_df["e"] == e]
-        e_cross = cross_df[cross_df["e"] == e]
-
-        e_seq.to_csv(results_dir / f"equiv_seq_e{e}.csv", index=False)
-        e_cross.to_csv(results_dir / f"equiv_cross_seed_e{e}.csv", index=False)
-
-        n_grid_points = e_seq["x"].astype(str).str.cat(e_seq["y"].astype(str), sep="_").nunique()
-        summary = grid_level_summary(e_seq, n_grid_points)
-        summary["e"] = e
-        overall_rows.append(summary)
-
-        # Which grid points drove non-convergence, and how badly (test 3 diagnostic)
-        non_conv = non_converged_report(e_seq)
-        non_conv.to_csv(results_dir / f"equiv_non_converged_gridpoints_e{e}.csv", index=False)
-        logger.info(
-            "e=%s: %d/%d grid points have >=1 seed that reached n_max=%d without stabilising "
-            "(reason='reached_n_max_no_stability'); see equiv_non_converged_gridpoints_e%s.csv",
-            e, len(non_conv), n_grid_points, config.n_max, e,
-        )
-
-        # (d) distribution of |E*| at convergence, per e — for converged (grid point, seed)
-        # pairs only; non-converged pairs are broken out separately above since their final
-        # |E*| reflects "still ambiguous at n_max", not a stabilised value.
-        converged = e_seq[e_seq["converged"]]
-        fig, ax = plt.subplots(figsize=(7, 5))
-        if len(converged):
-            ax.hist(converged["equiv_set_size_final"], bins=range(1, int(converged["equiv_set_size_final"].max()) + 2))
-        ax.set_xlabel("|E*| at convergence (# statistically tied-best (club, aim) combos)")
-        ax.set_ylabel("Count of (grid point, seed) pairs")
-        ax.set_title(f"Equivalence-set size at convergence — e={e}  "
-                     f"({len(converged)}/{len(e_seq)} pairs converged by N={config.n_max})")
-        fig.tight_layout()
-        fig.savefig(results_dir / f"equiv_size_at_convergence_e{e}.png", dpi=120)
-        plt.close(fig)
-
-        # (f) spatial map: where on the hole is |E*| large vs small
-        if hole is not None:
-            plot_equivalence_spatial_map(
-                e_seq, hole, e, config.n_max,
-                results_dir / f"equiv_spatial_map_e{e}.png",
-            )
-
-        # (c) mean sequential Jaccard-based match rate vs N — the fraction of
-        # (grid point, seed) pairs already converged by each N.
-        curve = pd.Series(
-            {N: float((e_seq["converged_N"].fillna(np.inf) <= N).mean()) for N in n_values}
-        )
-        match_rate_curves[e] = curve
-
-    overall_df = pd.DataFrame(overall_rows)
-    overall_df.to_csv(results_dir / "equiv_overall_summary.csv", index=False)
-
-    # (c) summary plot: match rate vs N, one curve per e
-    fig, ax = plt.subplots(figsize=(8, 5))
-    for e, curve in match_rate_curves.items():
-        ax.plot(curve.index, curve.values * 100, marker="o", label=f"e={e}")
-    ax.set_xlabel("N (shots per grid point)")
-    ax.set_ylabel("% (grid point, seed) pairs converged by N")
-    ax.set_title("Equivalence-set convergence vs N, by e")
-    ax.legend()
+    converged = seq_df[seq_df["converged"]]
+    fig, ax = plt.subplots(figsize=(7, 5))
+    if len(converged):
+        ax.hist(converged["equiv_set_size_final"],
+                bins=range(1, int(converged["equiv_set_size_final"].max()) + 2))
+    ax.set_xlabel("|E*| at stabilisation (# tied-best (club, aim) combos)")
+    ax.set_ylabel("Count of (grid point, seed) pairs")
+    ax.set_title(f"Equivalence-set size at stabilisation  "
+                 f"({len(converged)}/{len(seq_df)} pairs stabilised by N={config.n_max})")
     fig.tight_layout()
-    fig.savefig(results_dir / "equiv_match_rate_summary.png", dpi=120)
+    fig.savefig(results_dir / "equiv_size_at_convergence.png", dpi=120)
     plt.close(fig)
 
+    if make_spatial_map:
+        try:
+            from core import build_hole
+            hole = build_hole(data_dir, gp_training_iter=1)
+            plot_equivalence_spatial_map(seq_df, hole, config.n_max,
+                                        results_dir / "equiv_spatial_map.png")
+        except Exception:
+            logger.warning("Spatial map skipped (hole geometry unavailable).", exc_info=True)
+
     logger.info("Done. Outputs in %s", results_dir)
-    logger.info("Overall summary:\n%s", overall_df.to_string(index=False))
+    logger.info("Overall summary: %s", summary)
 
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Equivalence-set convergence post-processing.")
-    p.add_argument("--output-dir", type=Path, default=Path("outputs"),
-                   help="Directory containing seed{NNNN}/ subfolders with candidate parquet files.")
+    p.add_argument("--output-dir", type=Path, default=Path("outputs"))
     p.add_argument("--results-dir", type=Path, default=Path("equivalence_results"))
     p.add_argument("--n-seeds", type=int, default=100)
     p.add_argument("--n-start", type=int, default=10)
     p.add_argument("--n-step", type=int, default=10)
     p.add_argument("--n-max", type=int, default=500)
-    p.add_argument("--e-values", type=float, nargs="+", default=[1.0, 1.645, 2.0])
-    p.add_argument("--aim-tol-within", type=float, default=2.0)
-    p.add_argument("--aim-tol-cross", type=float, default=3.0)
+    p.add_argument("--e", type=float, default=1.0)
     p.add_argument("--jaccard-threshold", type=float, default=1.0)
     p.add_argument("--k-consecutive", type=int, default=3)
-    p.add_argument("--data-dir", type=Path, default=None,
-                   help="Directory with hole_9_data.csv etc, for the spatial map's hole geometry "
-                        "(defaults to Parallelisation/data/, same as core.py's default).")
-    p.add_argument("--no-spatial-map", action="store_true",
-                   help="Skip the hole-layout spatial map (e.g. if geometry data isn't available here).")
+    p.add_argument("--data-dir", type=Path, default=None)
+    p.add_argument("--no-spatial-map", action="store_true")
     p.add_argument("--log-level", default="INFO")
     return p.parse_args()
 
@@ -271,18 +217,14 @@ if __name__ == "__main__":
         level=getattr(logging, args.log_level.upper(), logging.INFO),
         format="%(asctime)s  %(levelname)-8s  %(message)s",
     )
-
     cfg = EquivalenceConfig(
-        e_values=tuple(args.e_values),
-        aim_tol_within=args.aim_tol_within,
-        aim_tol_cross=args.aim_tol_cross,
+        e=args.e,
         jaccard_threshold=args.jaccard_threshold,
         k_consecutive=args.k_consecutive,
         n_start=args.n_start,
         n_step=args.n_step,
         n_max=args.n_max,
     )
-
     run_analysis(
         output_dir=args.output_dir,
         results_dir=args.results_dir,

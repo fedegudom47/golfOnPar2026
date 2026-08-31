@@ -10,12 +10,18 @@ post-processing step (see equivalence.py / run_equivalence_analysis.py)
 using equivalence sets of tied-best combinations, computed from the full
 per-candidate R(s,theta)/SE(s,theta) data this worker persists below.
 
-So this worker simply sweeps N = n_start, n_start+n_step, ..., n_max shots
-per grid point and, at every N, saves:
+This worker sweeps N = n_start, n_start+n_step, ..., n_max shots per grid
+point (always to n_max — no early stopping) and, at every N, saves:
   - the arg-min snapshot (optimal_results) as before, for plotting/back-compat
-  - every (grid-point, club, aim) candidate's R(s,theta)=mean and
-    SE(s,theta)=sqrt(var/n_total), as a parquet file, for the equivalence-set
-    post-processing layer.
+  - ONLY the 1-SE equivalence set E*(g) per grid point, as a CSV file
+    (seed{SEED}_N{N}_equivset.csv). The full per-candidate table is not
+    persisted.
+  - a per-seed stabilisation log (seed{SEED}_stabilisation.tsv): for each N,
+    the % of grid points whose equivalence set has been unchanged (Jaccard==1)
+    for k_consecutive snapshots, plus the mean Jaccard vs the previous N and a
+    boolean flag once 100% of points have stabilised. The N at which 100% was
+    first reached (if ever) is recorded in seed{SEED}_result.json.
+Cross-seed agreement (Test 2) is separate post-processing: cross_seed_jaccard.py.
 
 Usage (direct):
     python convergence_worker.py --seed 0 --data-dir ../data --output-dir ./outputs
@@ -37,6 +43,7 @@ import pandas as pd
 
 # Local import – workers are run from inside the convergence/ directory
 from core import HoleData, build_hole, plot_optimal_approaches, results_to_dataframe, simulate_approach_shots
+from equivalence import SeedStabilityTracker
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +58,16 @@ class WorkerConfig:
     n_start: int   = 10       # initial shots per grid point
     n_step: int    = 10       # additional shots per iteration
     n_max: int     = 500      # sweep runs to this N (no early stopping — see equivalence.py)
-    aim_range: tuple[float, float] = (-20.0, 20.0)
-    aim_step: float = 2.0
+    aim_range: tuple[float, float] = (-40.0, 40.0)
+    aim_step: float = 5.0
     gp_training_iter: int = 100
     early_stop_N: Optional[int] = None  # cut short (for quick tests)
     carry_shift_yards: float = 0.0      # added to mean carry of all clubs
     variance_scale: float = 1.0         # multiplier on all club covariance matrices
+    # --- Equivalence-set / stabilisation tracking (computed live, see equivalence.py) ---
+    equiv_e: float = 1.0               # SE multiplier for the equivalence band
+    k_consecutive: int = 3            # consecutive Jaccard==1 snapshots => grid point stabilised
+    jaccard_threshold: float = 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +80,11 @@ class ConvergenceResult:
     n_iterations: int
     wall_time_s: float
     stopped_early: bool
+    n_grid_points: int = 0
+    n_points_stabilised: int = 0
+    final_pct_stable: float = 0.0
+    reached_100pct_stable: bool = False
+    first_N_100pct_stable: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------
@@ -156,20 +172,9 @@ def _save_snapshot_plot(
     )
 
 
-def _save_candidates(
-    seed: int,
-    N: int,
-    all_candidates: list[dict],
-    output_dir: Path,
-) -> None:
-    """Save every (grid-point, club, aim) candidate's R(s,theta)/n_total this N.
-
-    This is the full per-candidate data the equivalence-set post-processing
-    layer (equivalence.py) needs — SE(s,theta) = sqrt(var/n_total) is derived
-    from these columns, not stored directly.
-    """
-    path = output_dir / f"seed{seed:04d}_N{N:04d}_candidates.parquet"
-    df = pd.DataFrame([
+def _candidates_dataframe(all_candidates: list[dict]) -> pd.DataFrame:
+    """Tidy frame of every (grid-point, club, aim) candidate for one (seed, N)."""
+    return pd.DataFrame([
         {
             "x": float(c["start"][0]),
             "y": float(c["start"][1]),
@@ -178,13 +183,67 @@ def _save_candidates(
             "mean": float(c["mean"]),
             "var": float(c["var"]),
             "n_total": int(c["n_total"]),
-            "seed": seed,
-            "N": N,
         }
         for c in all_candidates
     ])
-    df.to_parquet(path, index=False)
-    logger.info("Saved candidates parquet → %s (%d rows)", path, len(df))
+
+
+def _save_equivset(
+    seed: int,
+    N: int,
+    sets: dict,
+    output_dir: Path,
+) -> None:
+    """Save ONLY the equivalence set for each grid point this N.
+
+    One row per (grid point, club, aim) that is within `equiv_e` * SE_min of
+    the arg-min ESHO. Columns: x, y, club, aim_offset, esho_mean, esho_se,
+    n_total, is_argmin, R_min, SE_min, equiv_set_size, seed, N.
+    The full per-candidate table is deliberately NOT persisted.
+    """
+    path = output_dir / f"seed{seed:04d}_N{N:04d}_equivset.csv"
+    frames = []
+    for (x, y), info in sets.items():
+        d = info["members_df"].copy()
+        d.insert(0, "x", float(x))
+        d.insert(1, "y", float(y))
+        d["R_min"] = info["R_min"]
+        d["SE_min"] = info["SE_min"]
+        d["equiv_set_size"] = info["size"]
+        frames.append(d)
+    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(
+        columns=["x", "y", "club", "aim_offset", "mean", "se", "n_total", "is_argmin",
+                 "R_min", "SE_min", "equiv_set_size"]
+    )
+    df = df.rename(columns={"mean": "esho_mean", "se": "esho_se"})
+    df["seed"] = seed
+    df["N"] = N
+    df.to_csv(path, index=False)
+    logger.info("Saved equivalence-set CSV → %s (%d rows)", path, len(df))
+
+
+def _append_stab_log(seed: int, row: dict, output_dir: Path) -> None:
+    """Append one line to the per-seed stabilisation log (TSV).
+
+    Columns: N, n_points, n_stable_ever, pct_stable_ever, n_stable_now,
+    pct_stable_now, n_equiv_size1, pct_equiv_size1, mean_jaccard_vs_prev,
+    all_points_stable.
+    """
+    log_path = output_dir / f"seed{seed:04d}_stabilisation.tsv"
+    cols = ["N", "n_points", "n_stable_ever", "pct_stable_ever", "n_stable_now",
+            "pct_stable_now", "n_equiv_size1", "pct_equiv_size1",
+            "mean_jaccard_vs_prev", "all_points_stable"]
+    header_needed = not log_path.exists()
+    with open(log_path, "a") as f:
+        if header_needed:
+            f.write("\t".join(cols) + "\n")
+        f.write("\t".join(_fmt(row[c]) for c in cols) + "\n")
+
+
+def _fmt(v: object) -> str:
+    if isinstance(v, float):
+        return f"{v:.6f}"
+    return str(v)
 
 
 def _save_result_json(result: ConvergenceResult, output_dir: Path) -> None:
@@ -244,6 +303,14 @@ def run_convergence(
     prev_results: Optional[list[dict]] = None  # for the arg-min match-rate diagnostic only
     accumulator: Optional[dict] = None          # accumulated shot strokes across iterations
 
+    # Live within-seed stabilisation tracker (Test 1). Keeps a rolling
+    # equivalence set per grid point and records when each first stabilises.
+    tracker = SeedStabilityTracker(
+        e=config.equiv_e,
+        k_consecutive=config.k_consecutive,
+        jaccard_threshold=config.jaccard_threshold,
+    )
+
     N = config.n_start   # total shots accumulated so far (for logging / CSV label)
     n_iterations = 0
     stopped_early = False
@@ -283,9 +350,22 @@ def run_convergence(
         club_counts = Counter(r["club"] for r in optimal_results)
         logger.info("  Club distribution: %s", dict(club_counts.most_common()))
 
+        # --- Equivalence-set + stabilisation tracking (Test 1, computed live) ---
+        cand_df = _candidates_dataframe(all_candidates)
+        stab_row, equiv_sets = tracker.update(N, cand_df)
+        logger.info(
+            "  Stabilised: %d/%d points ever (%.1f%%), %d currently; "
+            "mean Jaccard vs prev = %.3f%s",
+            stab_row["n_stable_ever"], stab_row["n_points"],
+            stab_row["pct_stable_ever"] * 100, stab_row["n_stable_now"],
+            stab_row["mean_jaccard_vs_prev"],
+            "  [ALL POINTS STABLE]" if stab_row["all_points_stable"] else "",
+        )
+
         # Save per-iteration outputs
         _save_csv(seed, N, optimal_results, seed_dir)
-        _save_candidates(seed, N, all_candidates, seed_dir)
+        _save_equivset(seed, N, equiv_sets, seed_dir)
+        _append_stab_log(seed, stab_row, seed_dir)
         _append_match_log(seed, N, match_rate, seed_dir)
         _save_snapshot_plot(seed, N, optimal_results, hole, seed_dir, match_rate=match_rate)
 
@@ -305,13 +385,24 @@ def run_convergence(
         n_iterations += 1
 
     wall_time = time.monotonic() - t0
+    stab_summary = tracker.summary()
     result = ConvergenceResult(
         seed=seed,
         n_iterations=n_iterations,
         wall_time_s=wall_time,
         stopped_early=stopped_early,
+        n_grid_points=stab_summary["n_grid_points"],
+        n_points_stabilised=stab_summary["n_points_stabilised"],
+        final_pct_stable=stab_summary["final_pct_stable"],
+        reached_100pct_stable=stab_summary["reached_100pct_stable"],
+        first_N_100pct_stable=stab_summary["first_N_100pct_stable"],
     )
     _save_result_json(result, seed_dir)
+    logger.info(
+        "Seed %d stabilisation: %d/%d points, 100%%-stable=%s (first at N=%s)",
+        seed, stab_summary["n_points_stabilised"], stab_summary["n_grid_points"],
+        stab_summary["reached_100pct_stable"], stab_summary["first_N_100pct_stable"],
+    )
 
     logger.info("=== Seed %d  DONE  (%.1fs) ===", seed, wall_time)
     logger.removeHandler(fh)
@@ -332,8 +423,12 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--n-start",       type=int,   default=10)
     p.add_argument("--n-step",        type=int,   default=10)
     p.add_argument("--n-max",         type=int,   default=500)
-    p.add_argument("--aim-step",      type=float, default=2.0)
+    p.add_argument("--aim-step",      type=float, default=5.0)
     p.add_argument("--gp-iter",       type=int,   default=100)
+    p.add_argument("--equiv-e",       type=float, default=1.0,
+                   help="SE multiplier for the equivalence band (E* = R<=R_min+e*SE_min).")
+    p.add_argument("--k-consecutive", type=int,   default=3,
+                   help="Consecutive Jaccard==1 snapshots for a grid point to count as stabilised.")
     p.add_argument("--early-stop-N",  type=int,   default=None,
                    help="Stop after this many shots (for quick tests).")
     p.add_argument("--log-level",     default="INFO")
@@ -354,6 +449,8 @@ if __name__ == "__main__":
         n_max=args.n_max,
         aim_step=args.aim_step,
         gp_training_iter=args.gp_iter,
+        equiv_e=args.equiv_e,
+        k_consecutive=args.k_consecutive,
         early_stop_N=args.early_stop_N,
     )
 

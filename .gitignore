@@ -1,1 +1,26 @@
+# --- Python ---
+__pycache__/
+*.pyc
+
+# --- macOS ---
+.DS_Store
+
+# --- R ---
+.RData
+.Rhistory
+
+# --- Convergence study: run outputs & derived artefacts (regenerated, large) ---
 Parallelisation/convergence/outputs/
+Parallelisation/convergence/outputs_new/
+Parallelisation/convergence/outputs*.tar
+Parallelisation/convergence/equivalence_results/
+Parallelisation/convergence/equivalence_bundle*.tar.gz
+Parallelisation/convergence/equiv_bundle*.tar.gz
+Parallelisation/convergence/cross_seed_jaccard/
+Parallelisation/convergence/results/
+
+# --- Sensitivity study outputs ---
+Parallelisation/sensitivity/outputs/
+Parallelisation/sensitivity/outputs_birdie/
+Parallelisation/sensitivity/rankedOutputs/
+Parallelisation/sensitivity/visualisations/

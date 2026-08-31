@@ -15,7 +15,7 @@
 
 # ---- USER CONFIGURATION -----------------------------------------------------
 # Absolute path to the repo root on the HPC cluster
-REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"              # <-- CHANGE THIS
+REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"              # 
 
 # Number of seeds to run (array indices 0 … N_SEEDS-1)
 N_SEEDS=100
@@ -25,7 +25,7 @@ N_SEEDS=100
 N_START=10
 N_STEP=10
 N_MAX=500
-AIM_STEP=2.0
+AIM_STEP=5.0
 GP_ITER=100
 
 # Slurm resource limits per task
