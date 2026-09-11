@@ -18,6 +18,8 @@ Parallelisation/convergence/equivalence_bundle*.tar.gz
 Parallelisation/convergence/equiv_bundle*.tar.gz
 Parallelisation/convergence/cross_seed_jaccard/
 Parallelisation/convergence/results/
+Parallelisation/convergence/ob_boundaries_preview.png
+Parallelisation/convergence/MyScripts/data/
 
 # --- Sensitivity study outputs ---
 Parallelisation/sensitivity/outputs/

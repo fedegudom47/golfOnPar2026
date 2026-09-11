@@ -1,0 +1,911 @@
+---
+title: "Convergence & Stabilisation"
+author: "Federica"
+date: "2026-09-01"
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    toc: true
+    df-print: kable
+  pdf: default
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(tidyverse)
+library(knitr)
+library(patchwork)   # install.packages("patchwork") if missing — side-by-side plots
+library(sf)          # install.packages("sf")        — course-context maps
+
+theme_set(theme_minimal(base_size = 12))
+
+outputs_dir <- "/Users/federicadomecq/gitrepos/golfOnPar/Parallelisation/convergence/outputs"
+
+data_dir <- "/Users/federicadomecq/gitrepos/golfOnPar/Parallelisation/convergence/MyScripts/data/"
+
+equiv_sequential   <- read_csv(file.path(data_dir, "equiv_sequential.csv"))
+equiv_cross_seed   <- read_csv(file.path(data_dir, "equiv_cross_seed.csv"))
+equiv_overall      <- read_csv(file.path(data_dir, "equiv_overall_summary.csv"))
+equiv_nonconv      <- read_csv(file.path(data_dir, "equiv_non_converged_gridpoints.csv"))
+stabilisation_N    <- read_csv(file.path(data_dir, "stabilisation_vs_N.csv"))
+stabilisation_seed <- read_csv(file.path(data_dir, "stabilisation_all_seeds.csv"))
+cross_seed_summary <- read_csv(file.path(data_dir, "cross_seed_jaccard_summary.csv"))
+cross_seed_N       <- read_csv(file.path(data_dir, "cross_seed_jaccard_vs_N.csv"))
+gridpoints         <- read_csv(file.path(data_dir, "gridpoints.csv"))
+
+# readr leaves the Python-style "True"/"False" as character — coerce to logical
+equiv_sequential   <- equiv_sequential   |> mutate(converged = as.logical(converged))
+stabilisation_seed <- stabilisation_seed |> mutate(all_points_stable = as.logical(all_points_stable))
+cross_seed_summary <- cross_seed_summary |> mutate(is_n_max = as.logical(is_n_max))
+
+N_MAX <- 500
+
+# ---- Derived frames used by many chunks below (defined here so the chunks
+#      work in any run order, not only top-to-bottom render) --------------
+cross_at_max <- cross_seed_summary |> filter(is_n_max)
+
+size_at_max <- equiv_sequential |>
+  group_by(x, y) |>
+  summarise(mean_equiv_size = mean(equiv_set_size_final),
+            frac_seeds_converged = mean(converged), .groups = "drop")
+
+map_df <- cross_at_max |> left_join(size_at_max, by = c("x", "y"))
+```
+
+## Background — what these two tests measure
+
+For every **grid point** (a candidate landing spot on the fairway) and every
+**sample size `N`** (Monte-Carlo approach shots simulated per club/aim option),
+we compute the **equivalence set** `E*`: every (club, aim) combination whose
+expected strokes-to-hole-out (ESHO) is within **one standard error** of the
+single best option. `E*` is the set of strategies we *cannot statistically
+separate* from optimal at that `N`.
+
+- **Within-seed stabilisation (Test 1)** — does `E*` stop moving as we add
+  shots? A grid point is declared *stabilised* at the first `N` where its `E*`is identical (Jaccard = 1) for **3 consecutive `N` steps**. Answers *how much simulation is enough*.
+- **Cross-seed agreement (Test 2)** — 100 independent random seeds each run the
+  full sweep. At a fixed `N`, how similar are the 100 `E*` sets they produce for
+  the same grid point? Measured by **pairwise Jaccard**
+  (`|intersection| / |union|`, averaged over all `100·99/2` seed pairs).
+  Answers *whether the answer is reproducible* or a fluke of one seed.
+
+Ideal end state: every point stabilised (Test 1) **and** every seed agreeing on
+the same `E*` (Test 2 Jaccard → 1).
+
+---
+
+# Within-seed stabilisation
+
+## % of points stabilised vs N EVER
+
+```{r within-pct-ever, fig.width=9, fig.height=5.5}
+ggplot(stabilisation_seed, aes(N, pct_stable_ever * 100, group = seed)) +
+  geom_line(alpha = 0.15, colour = "steelblue") +
+  stat_summary(aes(group = 1), fun = mean, geom = "line",
+               linewidth = 1.3, colour = "black") +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(x = "N (shots per grid point)",
+       y = "% of grid points stabilised",
+       title = "Within-seed stabilisation over N",
+       subtitle = "thin lines = each of the 100 seeds, thick line = mean across seeds")
+```
+
+**What this shows.** For each seed, the running fraction of its 280 grid points that have met the "unchanged for 3 consecutive `N`" rule, vs `N`. 
+
+**The statistic.** `pct_stable_ever` = (# points that have *ever* triggered the 3-in-a-row rule by this `N`) / (# points). Monotone non-decreasing by construction — a point that stabilises stays counted even if its `E*` later wobbles (the strict "still stable right now" version is `pct_stable_now` in `stabilisation_vs_N.csv`).
+
+**Read it as.** This curve is the simulation-budget cost function: the `N` where the mean line flattens near 100% is the point of diminishing returns. A wide fan between the thin lines means the required budget is unpredictable run-to-run; a tight fan means it is well-determined.
+
+## Three stabilisation signals (mean across seeds)
+
+```{r within-signals, fig.width=9, fig.height=5}
+stabilisation_N |>
+  select(N,
+         `stabilised (E* unchanged 3x)` = mean_pct_stable_ever,
+         `E* collapsed to a single option` = mean_pct_equiv_size1,
+         `Jaccard of E* vs previous N` = mean_jaccard_vs_prev) |>
+  pivot_longer(-N, names_to = "signal", values_to = "value") |>
+  ggplot(aes(N, value * 100, colour = signal)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 1) +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(x = "N", y = "%", colour = NULL,
+       title = "Within-seed convergence signals vs N (mean of 100 seeds)")
+```
+
+**What this shows.** Three ways of asking "has the model settled?", each averaged over the 100 seeds.
+
+**The metrics.**
+
+| line | metric | meaning |
+|---|---|---|
+| stabilised | `mean_pct_stable_ever` | % of points that passed the 3-consecutive-`N` Jaccard = 1 test |
+| E\* size 1 | `mean_pct_equiv_size1` | % of points where `E*` currently holds exactly **one** club/aim option (a uniquely best play, no ties) |
+| Jaccard vs prev | `mean_jaccard_vs_prev` | mean similarity of each point's `E*` between `N` and `N−10` (1 = no change this step) |
+
+**Read it as.** "Jaccard vs prev" is the leading indicator — it rises first as
+sets stop changing step-to-step. "Stabilised" lags it (needs 3 good steps in a
+row). "E\* size 1" is a *different question*: a perfectly stable set can still
+have size > 1 (a genuine tie). If "size 1" plateaus well below "stabilised",
+that gap is real strategic ambiguity — more shots will not remove it.
+
+## Per-seed: N at which the whole seed stabilised
+
+```{r seed-conv-table}
+seed_conv <- equiv_sequential |>
+  group_by(seed) |>
+  summarise(
+    n_points       = n(),
+    n_converged    = sum(converged),
+    frac_converged = mean(converged),
+    all_converged  = all(converged),
+    all_stable_N   = if_else(all(converged), max(converged_N), NA_real_),
+    .groups = "drop"
+  )
+
+seed_conv |>
+  summarise(
+    n_seeds                    = n(),
+    seeds_fully_stabilised     = sum(all_converged),
+    seeds_not_fully_stabilised = sum(!all_converged),
+    `all_stable_N: median`     = median(all_stable_N, na.rm = TRUE),
+    `all_stable_N: IQR`        = IQR(all_stable_N, na.rm = TRUE),
+    `all_stable_N: min`        = min(all_stable_N, na.rm = TRUE),
+    `all_stable_N: max`        = max(all_stable_N, na.rm = TRUE)
+  ) |>
+  pivot_longer(everything(), names_to = "statistic", values_to = "value") |>
+  kable(digits = 1, caption = "Per-seed full-stabilisation summary")
+```
+
+**What this shows.** Each seed collapsed to one number — `all_stable_N`, the
+largest `converged_N` over that seed's 280 points, i.e. the `N` at which the
+*last straggler* point stabilised. Seeds with any never-stabilising point get
+`NA` and land in `seeds_not_fully_stabilised`.
+
+**The statistics.** `median / IQR / min / max` are over the seeds that *did*
+fully stabilise. `IQR` (interquartile range) is the spread of the middle 50%.
+`seeds_not_fully_stabilised` is the count that reached `N` = `r N_MAX` with ≥ 1
+unstable point.
+
+**Read it as.** `median all_stable_N` is the recommended simulation budget for a
+typical run; `max` is the safe budget among seeds that converge at all. A
+non-trivial `seeds_not_fully_stabilised` means the recommendation needs a
+caveat — some runs always keep a few genuinely ambiguous points.
+
+```{r seed-conv-hist, fig.width=8, fig.height=4.5}
+ggplot(seed_conv, aes(all_stable_N)) +
+  geom_histogram(binwidth = 10, boundary = 0, fill = "steelblue", colour = "white") +
+  labs(x = "N at which every grid point in the seed had stabilised",
+       y = "# seeds",
+       title = "When does a whole seed stabilise?",
+       subtitle = glue::glue("{sum(!seed_conv$all_converged)} of {nrow(seed_conv)} seeds never fully stabilised by N = {N_MAX}"))
+```
+
+**What this shows.** The distribution of `all_stable_N` across seeds
+(never-fully-stabilised seeds are dropped — count in the subtitle).
+
+**Read it as.** Tight and left-sited ⇒ the budget is small and reliable. A long
+right tail ⇒ a few unlucky seeds drag the safe budget up. Mass piled against the
+`N` = `r N_MAX` edge would mean the sweep stopped too early; clear empty space
+before the edge means `N` = `r N_MAX` was long enough for essentially all
+converging seeds.
+
+## Equivalence-set size at stabilisation
+
+```{r equiv-size, fig.width=8, fig.height=4.5}
+converged_pts <- equiv_sequential |> filter(converged)
+
+ggplot(converged_pts, aes(equiv_set_size_final)) +
+  geom_bar(fill = "steelblue") +
+  labs(x = "|E*| at the point of stabilisation",
+       y = "# (grid point, seed) pairs",
+       title = "How many club/aim options remain statistically tied once a point stabilises")
+
+converged_pts |>
+  count(equiv_set_size_final, name = "n_pairs") |>
+  mutate(pct = round(100 * n_pairs / sum(n_pairs), 1)) |>
+  kable(caption = "Distribution of |E*| at stabilisation")
+```
+
+**What this shows.** Among all (grid point, seed) pairs that stabilised, the
+size of `E*` at the moment it stabilised — how many club/aim combinations are
+still tied for best.
+
+**The statistic.** `equiv_set_size_final` = `|E*|` at `converged_N`. The table
+gives the count and % of pairs at each size.
+
+**Read it as.** `|E*|` = 1 ⇒ one uniquely best strategy. `|E*|` ≥ 2 ⇒ the model
+converged onto a genuine tie: several strategies are statistically
+indistinguishable and would need a finer aim grid or a different metric to
+separate (more Monte-Carlo shots will *not* help, because the set is already
+stable). The mass above 1 is the irreducible strategic ambiguity of the hole.
+
+---
+
+# Cross-seed agreement
+
+## Overall scorecard
+
+```{r cross-overall}
+cross_at_max <- cross_seed_summary |> filter(is_n_max)
+
+tibble(
+  metric = c(
+    "grid points",
+    "seeds",
+    "% grid points converged (>=50% of seeds)      [overall summary]",
+    "mean |E*| at convergence                      [overall summary]",
+    "median |E*| at convergence                    [overall summary]",
+    glue::glue("mean pairwise cross-seed Jaccard at N={N_MAX}"),
+    glue::glue("median pairwise cross-seed Jaccard at N={N_MAX}"),
+    glue::glue("grid points with FULL agreement at N={N_MAX} (mean J >= 0.999)"),
+    glue::glue("grid points with mean J < 0.5 at N={N_MAX}")
+  ),
+  value = c(
+    nrow(gridpoints),
+    max(cross_seed_summary$n_seeds),
+    equiv_overall$pct_grid_points_converged,
+    round(equiv_overall$mean_equiv_set_size_at_convergence, 2),
+    round(equiv_overall$median_equiv_set_size_at_convergence, 2),
+    round(mean(cross_at_max$mean_jaccard), 3),
+    round(median(cross_at_max$mean_jaccard), 3),
+    sum(cross_at_max$mean_jaccard >= 0.999),
+    sum(cross_at_max$mean_jaccard < 0.5)
+  )
+) |>
+  kable(caption = "Headline numbers")
+```
+
+**What this shows.** A one-glance scorecard combining both tests at the end of
+the sweep.
+
+**The metrics.**
+
+- **% grid points converged** — a point counts as converged if **≥ half** its
+  seeds passed Test 1. `100` = every point converged for a majority of seeds.
+- **mean / median `|E*|` at convergence** — over all converged (point, seed)
+  pairs. `> 1` ⇒ the typical converged point still carries a strategic tie.
+- **mean / median pairwise cross-seed Jaccard at `N` = `r N_MAX`** — averaged
+  over seed pairs within a grid point, then over grid points. `1` ⇒ every seed
+  produced an identical `E*` everywhere.
+- **full agreement / mean J < 0.5** — the tails: how many points are completely
+  reproducible vs essentially a coin-flip between seeds.
+
+**Read it as.** Test 1 and Test 2 can disagree: a point can stabilise *within*
+every seed yet different seeds stabilise onto *different* sets. High "%
+converged" with a middling mean Jaccard is exactly that — locally stable,
+globally not yet pinned down.
+
+## Cross-seed Jaccard vs N
+
+```{r cross-vs-n, fig.width=9, fig.height=5}
+ggplot(cross_seed_N, aes(N, mean_jaccard_over_gridpoints)) +
+  geom_line(linewidth = 1.2, colour = "firebrick") +
+  geom_point(size = 1.6, colour = "firebrick") +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "N (shots per grid point)",
+       y = "mean pairwise Jaccard\n(averaged over all grid points)",
+       title = "Do independent seeds converge to the same equivalence set?",
+       subtitle = "1 = every seed produces an identical E* for every grid point")
+```
+
+**What this shows.** The headline Test 2 curve: at each `N`, the pairwise
+cross-seed Jaccard averaged over all seed pairs and all grid points.
+
+**The statistic.** `mean_jaccard_over_gridpoints` — for each grid point take the
+mean of its `100·99/2` pairwise Jaccard values, then average those over the 280
+grid points.
+
+**Read it as.** Should climb monotonically and asymptote. The asymptote is the
+*reproducibility ceiling*: if it levels off below 1, seeds keep disagreeing no
+matter how long the sweep runs, because they are disagreeing about genuine ties,
+not noise. Still rising at `N` = `r N_MAX` ⇒ more simulation would still buy
+reproducibility.
+
+## Cross-seed core vs union, and exact agreement
+
+```{r cross-core-union, fig.width=9, fig.height=7}
+p_core <- equiv_cross_seed |>
+  group_by(N) |>
+  summarise(`core (in EVERY seed)` = mean(core_size),
+            `union (in ANY seed)`  = mean(union_size), .groups = "drop") |>
+  pivot_longer(-N, names_to = "set", values_to = "size") |>
+  ggplot(aes(N, size, colour = set)) +
+  geom_line(linewidth = 1) +
+  labs(x = "N", y = "mean set size over grid points", colour = NULL,
+       title = "Core vs union of E* across seeds")
+
+p_agree <- equiv_cross_seed |>
+  group_by(N) |>
+  summarise(mean_full_agreement = mean(full_agreement_frac), .groups = "drop") |>
+  ggplot(aes(N, mean_full_agreement * 100)) +
+  geom_line(linewidth = 1, colour = "firebrick") +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(x = "N", y = "% of seeds equal to the core",
+       title = "Fraction of seeds in exact agreement")
+
+p_core / p_agree
+```
+
+**What this shows.** Two complementary views over `N`. *Top:* the **core** (`E*`
+elements shared by *all* 100 seeds) and the **union** (elements in *any* seed),
+each averaged over grid points. *Bottom:* the fraction of seeds whose `E*`
+exactly equals the core.
+
+**The metrics.** `core_size` = `|`intersection of all seed sets`|`.
+`union_size` = `|`union of all seed sets`|`. `full_agreement_frac` = share of
+seeds whose `E*` is identical to the core (adds nothing to the union).
+
+**Read it as.** As seeds converge, core ↑ and union ↓ until they meet — the gap
+between the two lines is the disagreement budget. `full_agreement_frac` → 1 is
+the strongest reproducibility statement possible (not "similar" sets but *the
+same* set). If core and union stay far apart, the average point has a solid
+agreed core plus a fringe of seed-specific extras.
+
+## Distribution of agreement across grid points (N = 500)
+
+```{r cross-dist, fig.width=9, fig.height=4.5}
+ggplot(cross_at_max, aes(mean_jaccard)) +
+  geom_histogram(binwidth = 0.05, boundary = 0, fill = "firebrick", colour = "white") +
+  labs(x = glue::glue("mean pairwise cross-seed Jaccard (N = {N_MAX})"),
+       y = "# grid points",
+       title = "Per-grid-point cross-seed agreement at the final N")
+
+cross_at_max |>
+  summarise(
+    min = min(mean_jaccard), q25 = quantile(mean_jaccard, .25),
+    median = median(mean_jaccard), mean = mean(mean_jaccard),
+    q75 = quantile(mean_jaccard, .75), max = max(mean_jaccard)
+  ) |>
+  kable(digits = 3, caption = glue::glue("mean_jaccard across {nrow(cross_at_max)} grid points at N = {N_MAX}"))
+```
+
+**What this shows.** The spread behind the single "mean Jaccard" headline: one
+value per grid point at `N` = `r N_MAX`, histogrammed, plus a five-number
+summary.
+
+**The statistics.** `min / q25 / median / mean / q75 / max` of the
+per-grid-point `mean_jaccard`. `q25 / q75` are the 25th/75th percentiles (a
+boxplot's box); a `mean` well below the `median` signals a left skew.
+
+**Read it as.** A spike near 1 plus a spread of lower values (bimodal) is the
+usual signature: many points fully reproducible, a distinct sub-population not.
+The left tail names the problem points; the histogram mass below ~0.5 is the
+share of the course where the optimal strategy *set* is not yet reproducible.
+
+```{r cross-frac-identical, fig.width=9, fig.height=4.5}
+ggplot(cross_at_max, aes(frac_pairs_identical)) +
+  geom_histogram(binwidth = 0.05, boundary = 0, fill = "firebrick", colour = "white") +
+  labs(x = glue::glue("fraction of seed-pairs with an identical E* (N = {N_MAX})"),
+       y = "# grid points",
+       title = "How often do two seeds land on exactly the same set?")
+```
+
+**What this shows.** For each grid point, the share of the `100·99/2` seed pairs
+whose `E*` sets are *exactly* equal (Jaccard exactly 1), at `N` = `r N_MAX`.
+
+**The statistic.** `frac_pairs_identical` — a stricter cousin of `mean_jaccard`:
+only perfect matches count, "close" doesn't.
+
+**Read it as.** This is the number to quote for "reproducible". A point with
+`mean_jaccard` = 0.9 but `frac_pairs_identical` = 0.1 has sets that are
+*similar* but rarely *identical* — usually one flip-flopping fringe element.
+Points near `frac_pairs_identical` = 1 are locked in.
+
+## Best- and worst-agreeing grid points (N = 500)
+
+```{r cross-extremes}
+cross_at_max |>
+  arrange(desc(mean_jaccard)) |>
+  slice_head(n = 10) |>
+  select(gp_id, x, y, mean_jaccard, median_jaccard, min_jaccard, frac_pairs_identical) |>
+  kable(digits = 3, caption = "Top 10 grid points — seeds agree most")
+
+cross_at_max |>
+  arrange(mean_jaccard) |>
+  slice_head(n = 10) |>
+  select(gp_id, x, y, mean_jaccard, median_jaccard, min_jaccard, frac_pairs_identical) |>
+  kable(digits = 3, caption = "Bottom 10 grid points — seeds disagree most")
+```
+
+**What this shows.** The named extremes: the 10 most and 10 least reproducible
+grid points, with hole coordinates.
+
+**The columns.** `mean_jaccard / median_jaccard` — average and typical pairwise
+similarity; `min_jaccard` — the worst single seed pair (0 = two seeds share no
+strategy at all); `frac_pairs_identical` — share of exact matches.
+
+**Read it as.** Cross-reference the bottom-10 `(x, y)` against the spatial maps
+below. If the worst points cluster in one region of the hole (a wide fairway
+landing zone, a hazard edge) that is a substantive finding about the course, not
+a numerical artefact.
+
+## Side-by-side hole maps: cross-seed agreement vs equivalence-set size (N = 500)
+
+```{r cross-spatial-side, fig.width=13, fig.height=8}
+size_at_max <- equiv_sequential |>
+  group_by(x, y) |>
+  summarise(mean_equiv_size = mean(equiv_set_size_final),
+            frac_seeds_converged = mean(converged), .groups = "drop")
+
+map_df <- cross_at_max |> left_join(size_at_max, by = c("x", "y"))
+
+p_j <- ggplot(map_df, aes(x, y, fill = mean_jaccard)) +
+  geom_tile(width = 11, height = 11) +
+  scale_fill_viridis_c(limits = c(0, 1), name = "mean\nJaccard") +
+  coord_equal() +
+  labs(x = "x (yards)", y = "y (yards)",
+       title = "Cross-seed agreement",
+       subtitle = "yellow = seeds agree, purple = they don't")
+
+p_s <- ggplot(map_df, aes(x, y, fill = mean_equiv_size)) +
+  geom_tile(width = 11, height = 11) +
+  scale_fill_viridis_c(option = "magma", direction = -1, name = "mean\n|E*|") +
+  coord_equal() +
+  labs(x = "x (yards)", y = "y (yards)",
+       title = "Equivalence-set size",
+       subtitle = "dark = one clear best play, light = many tied options")
+
+p_j + p_s
+```
+
+**What this shows.** The same 280 grid points on the hole, coloured two ways at
+`N` = `r N_MAX`. **Left:** mean pairwise cross-seed Jaccard — *do the seeds agree
+here?* **Right:** mean `|E*|` across seeds — *how many strategies are tied here?*
+
+**The statistics.** Left fill = per-point `mean_jaccard` (0–1). Right fill =
+per-point mean of `equiv_set_size_final` over the 100 seeds. Tiles ≈ 11 yd, the
+grid spacing.
+
+**Read it as.** The two maps should be near mirror images: **large `|E*|` (light,
+right) lines up with low agreement (purple, left)**. That is the mechanism —
+where many club/aim options are genuinely tied, each seed's noise picks a
+slightly different subset, so pairwise Jaccard drops. Dark-right / yellow-left
+regions are solved: one best play, every seed finds it. Disagreement (purple
+left) where the set is *small* (dark right) is anomalous — likely a knife-edge
+between two distinct strategies rather than a broad tie — and worth a look.
+
+## Does within-seed ambiguity explain cross-seed disagreement?
+
+```{r cross-vs-size, fig.width=8, fig.height=5}
+ggplot(map_df, aes(mean_equiv_size, mean_jaccard)) +
+  geom_point(aes(colour = frac_seeds_converged), size = 2, alpha = 0.8) +
+  scale_colour_viridis_c(name = "frac seeds\nstabilised") +
+  labs(x = "mean |E*| across seeds at N = 500",
+       y = "mean pairwise cross-seed Jaccard",
+       title = "Larger tied-best sets -> seeds agree less")
+```
+
+**What this shows.** The relationship in the two maps, as a scatter: one point
+per grid point, `|E*|` size on x, cross-seed Jaccard on y, coloured by the
+fraction of seeds that stabilised there.
+
+**Read it as.** A clear downward trend confirms the mechanism — cross-seed
+disagreement is driven by genuine strategic ambiguity (`|E*|` > 1), not by
+under-sampling. Bottom-right points (big set, low agreement, often low
+`frac_seeds_converged`) are the hard cases; top-left (size ≈ 1, Jaccard ≈ 1) are
+fully solved. Vertical scatter at a fixed small `|E*|` would mean something other
+than set size is causing disagreement there.
+
+## Grid points that never fully stabilised
+
+```{r nonconv-table}
+equiv_nonconv |>
+  arrange(desc(frac_seeds_not_converged)) |>
+  kable(digits = 3,
+        caption = "Grid points with >=1 seed that hit N = 500 without a stable E*")
+```
+
+**What this shows.** Every grid point where at least one seed reached
+`N` = `r N_MAX` with an `E*` still changing.
+
+**The columns.** `n_seeds_not_converged / frac_seeds_not_converged` — how many /
+what share of the 100 seeds failed to stabilise here.
+`mean_equiv_set_size_stuck / max_equiv_set_size_stuck` — the size of the
+still-moving `E*` for those seeds (large = a wide, genuinely ambiguous landing
+zone; small = a persistent flip between two near-identical options).
+
+**Read it as.** The definitive list of "hard" grid points. If
+`frac_seeds_not_converged` is a few percent everywhere, the sweep is essentially
+complete and these are edge cases. Large stuck sizes mark regions where the
+recommendation should be reported as a *set* of acceptable plays, not a single
+optimum.
+
+---
+
+# Anatomy of ambiguous equivalence sets
+
+```{r ambig-load}
+eq_files <- list.files(outputs_dir, "seed[0-9]+_N0500_equivset\\.csv$",
+                       recursive = TRUE, full.names = TRUE)
+
+eq500 <- map_dfr(eq_files, read_csv, show_col_types = FALSE) |>
+  mutate(is_argmin = as.logical(is_argmin))
+
+# per (grid point, seed): how spread out is this seed's E* ?
+set_spread <- eq500 |>
+  group_by(x, y, seed) |>
+  summarise(
+    set_size    = n(),
+    n_clubs     = n_distinct(club),
+    esho_range  = max(esho_mean) - min(esho_mean),          # strokes, best..worst in E*
+    aim_span    = max(aim_offset) - min(aim_offset),        # yards
+    SE_min      = first(SE_min),
+    esho_range_rel = (max(esho_mean) - min(esho_mean)) / first(SE_min),  # 0..1 of the 1-SE band used
+    .groups = "drop"
+  )
+
+# aggregate to the grid point and tag by cross-seed agreement
+point_spread <- set_spread |>
+  group_by(x, y) |>
+  summarise(across(c(set_size, n_clubs, esho_range, aim_span, esho_range_rel), mean),
+            .groups = "drop") |>
+  left_join(select(cross_at_max, x, y, mean_jaccard, frac_pairs_identical),
+            by = c("x", "y")) |>
+  mutate(agreement = factor(
+    case_when(
+      mean_jaccard >= 0.80 ~ "clear (J >= 0.80)",
+      mean_jaccard >= 0.50 ~ "mixed (0.50-0.80)",
+      TRUE                 ~ "ambiguous (J < 0.50)"
+    ),
+    levels = c("clear (J >= 0.80)", "mixed (0.50-0.80)", "ambiguous (J < 0.50)")
+  ))
+
+point_spread |> count(agreement) |> kable(caption = "Grid points by cross-seed agreement class")
+```
+
+## How wide is the equivalence set — ambiguous vs clear points
+
+```{r ambig-boxes, fig.width=11, fig.height=8}
+metric_labels <- c(
+  set_size       = "|E*|  (# tied club/aim options)",
+  n_clubs        = "# distinct clubs in E*",
+  aim_span       = "aim span in E*  (yards, max - min)",
+  esho_range_rel = "ESHO range in E*  (fraction of the 1-SE band)"
+)
+
+point_spread |>
+  select(agreement, all_of(names(metric_labels))) |>
+  pivot_longer(-agreement, names_to = "metric", values_to = "value") |>
+  mutate(metric = factor(metric_labels[metric], levels = metric_labels)) |>
+  ggplot(aes(agreement, value, fill = agreement)) +
+  geom_violin(alpha = 0.4, colour = NA) +
+  geom_boxplot(width = 0.18, outlier.size = 0.6) +
+  facet_wrap(~ metric, scales = "free_y") +
+  scale_fill_manual(values = c("#2e7d32", "#f9a825", "#c62828"), guide = "none") +
+  labs(x = NULL, y = NULL,
+       title = "What the equivalence set looks like, by cross-seed agreement class",
+       subtitle = "each point = one grid point, averaged over its 100 seeds")
+```
+
+**What this shows.** Four descriptors of the equivalence set, split by how well
+the seeds agree at that grid point (green / amber / red = clear / mixed /
+ambiguous, thresholds on `mean_jaccard`). Each dot is a grid point; the value is
+the mean over its 100 seeds.
+
+**The metrics.**
+
+- **`|E*|`** — number of (club, aim) options that survive the 1-SE cut.
+- **`# distinct clubs`** — how many *different clubs* are in the set (2 aims of
+  the same club counts as 1). Distinguishes "same club, fine aim wobble" from
+  "genuinely different clubs are tied".
+- **`aim span`** — `max(aim_offset) − min(aim_offset)` across the set, in yards.
+- **`ESHO range (fraction of 1-SE band)`** — `(max ESHO − min ESHO) / SE_min`.
+  By construction this is between 0 and 1; near 1 means the set stretches the
+  full standard error, near 0 means every member has almost the same expected
+  score.
+
+**Read it as.** If the red group sits higher on `|E*|`, `# clubs` and `aim span`
+but its **ESHO range is still small** (all members score within a hair of each
+other), the disagreement is *benign*: the seeds are quibbling between plays that
+are, for scoring purposes, interchangeable. If the red group also has a large
+ESHO range, the seeds are disagreeing about options that are measurably
+different — a more serious reproducibility problem.
+
+## ESHO spread inside the set, vs cross-seed agreement
+
+```{r ambig-scatter, fig.width=9, fig.height=5.5}
+ggplot(point_spread, aes(mean_jaccard, esho_range, colour = n_clubs)) +
+  geom_point(size = 2, alpha = 0.85) +
+  scale_colour_viridis_c(name = "# clubs\nin E*") +
+  labs(x = "mean pairwise cross-seed Jaccard (N = 500)",
+       y = "ESHO range within E*  (strokes, best - worst member)",
+       title = "Do low-agreement points also have a wide range of expected scores?",
+       subtitle = "y is capped at SE_min by construction")
+```
+
+**What this shows.** One point per grid point: cross-seed agreement on the x
+axis, the spread of expected strokes *inside* the equivalence set on the y axis,
+coloured by how many different clubs are tied.
+
+**Read it as.** A negative slope means low-agreement points genuinely span a
+wider band of expected outcomes. If instead the cloud is flat and low
+(everything within ~0.02 strokes regardless of Jaccard) then even the worst
+disagreement is between near-identical plays — quote that number as the "cost of
+irreproducibility in strokes". Colour tells you whether wide sets are one club
+with many aims (low # clubs) or a true multi-club tie (high # clubs).
+
+## What is actually tied — the 9 least reproducible grid points
+
+```{r ambig-composition, fig.width=12, fig.height=9}
+worst9 <- cross_at_max |> arrange(mean_jaccard) |> slice_head(n = 9) |>
+  mutate(panel = glue::glue("gp {gp_id}  ({round(x)}, {round(y)})  J={round(mean_jaccard,2)}"))
+
+eq500 |>
+  inner_join(select(worst9, x, y, panel), by = c("x", "y")) |>
+  count(panel, club, aim_offset, name = "n_seeds") |>
+  group_by(panel) |>
+  mutate(club = fct_reorder(club, n_seeds, sum)) |>
+  ungroup() |>
+  ggplot(aes(aim_offset, club, size = n_seeds, colour = n_seeds)) +
+  geom_point(alpha = 0.8) +
+  facet_wrap(~ panel, scales = "free_y") +
+  scale_size_area(max_size = 7, name = "# seeds") +
+  scale_colour_viridis_c(name = "# seeds") +
+  labs(x = "aim offset (yards)", y = NULL,
+       title = "Equivalence-set membership across seeds, at the 9 worst grid points",
+       subtitle = "a dot = a (club, aim) that appeared in E* for that many of the 100 seeds")
+```
+
+**What this shows.** For each of the 9 lowest-Jaccard grid points, every
+(club, aim) combination that showed up in *any* seed's `E*`, with dot size/colour
+= how many of the 100 seeds included it.
+
+**Read it as.** A few big dots + many small ones = there is a stable agreed core
+(the big dots, in nearly every seed) plus a scatter of seed-specific fringe
+picks — the fringe is what drives Jaccard down. Big dots spread across *several
+clubs* (rows) means genuinely different clubs are competitive here; big dots in
+*one row across many aim values* means it is one club and the aim is
+under-determined. Vertically compact clusters are easier to summarise as a
+recommendation than spread-out ones.
+
+## Is the ambiguity driven by club or by aim?
+
+For each grid point we look at every seed's **single best (arg-min) combination**
+and ask: do the seeds disagree about which *club* to hit, or do they agree on
+club and only disagree about the *aim offset*?
+
+```{r ambig-driver-setup}
+argmins <- eq500 |>
+  filter(is_argmin) |>
+  distinct(x, y, seed, .keep_all = TRUE) |>
+  select(x, y, seed, argmin_club = club, argmin_aim = aim_offset)
+
+driver_df <- argmins |>
+  group_by(x, y) |>
+  mutate(modal_club = { t <- table(argmin_club); names(t)[which.max(t)] }) |>
+  summarise(
+    n_seeds          = n(),
+    club_instability = mean(argmin_club != modal_club),          # frac of seeds off the most-common best club
+    aim_sd_modal     = sd(argmin_aim[argmin_club == modal_club]),# sd of best aim (yд), among seeds that agree on club
+    n_best_clubs     = n_distinct(argmin_club),
+    .groups = "drop"
+  ) |>
+  left_join(select(cross_at_max, x, y, mean_jaccard), by = c("x", "y")) |>
+  mutate(
+    aim_sd_modal = replace_na(aim_sd_modal, 0),
+    driver = factor(
+      case_when(
+        mean_jaccard >= 0.80                             ~ "reproducible",
+        club_instability >= 0.15 & aim_sd_modal >= 2.5   ~ "club & aim",
+        club_instability >= 0.15                         ~ "club",
+        aim_sd_modal >= 1.0                              ~ "aim",
+        TRUE                                             ~ "minimal"
+      ),
+      levels = c("reproducible", "minimal", "aim", "club", "club & aim")
+    )
+  )
+```
+
+```{r ambig-driver-scatter, fig.width=9, fig.height=6}
+lab <- tibble(
+  club_instability = c(0.02, 0.35, 0.02, 0.35),
+  aim_sd_modal     = c(0.6, 0.6, 11, 11),
+  text = c("reproducible-ish", "club-driven", "aim-driven", "club & aim")
+)
+
+driver_df |>
+  filter(mean_jaccard < 0.80) |>
+  ggplot(aes(club_instability, aim_sd_modal)) +
+  geom_vline(xintercept = 0.15, linetype = 2, colour = "grey55") +
+  geom_hline(yintercept = 2.5, linetype = 2, colour = "grey55") +
+  geom_point(aes(colour = mean_jaccard, size = n_best_clubs), alpha = 0.85) +
+  geom_text(data = lab, aes(label = text), colour = "grey35", fontface = "italic", size = 3.5) +
+  scale_colour_viridis_c(limits = c(0, 1), name = "cross-seed\nJaccard") +
+  scale_size_continuous(name = "# distinct\nbest clubs", range = c(1, 5)) +
+  labs(x = "club instability  (fraction of seeds NOT on the modal best club)",
+       y = "aim instability  (SD of best aim across seeds, yards)",
+       title = "What makes the seeds disagree at each ambiguous grid point?",
+       subtitle = "non-reproducible points only (mean Jaccard < 0.80)")
+```
+
+**What this shows.** One dot per non-reproducible grid point. **x** = how often
+the seeds pick a *different club* as best (0 = every seed agrees on the club).
+**y** = how much the *best aim* wanders between seeds (standard deviation in
+yards, computed only over the seeds that agree on the club, so it is a pure aim
+signal). Colour = cross-seed Jaccard; size = number of distinct clubs that were
+ever "best" here.
+
+**The metrics.** `club_instability` = `mean(argmin_club != modal_club)` across
+the 100 seeds. `aim_sd_modal` = `sd(argmin_aim)` restricted to seeds on the
+modal club. Dashed lines at `0.15` and `2.5 yд` (half the 5 yд aim grid) split
+the plane into the four regimes labelled in grey.
+
+**Read it as.** Bottom-right = *club-driven*: seeds can't agree which club to
+hit. Top-left = *aim-driven*: they agree on the club, the aim is
+under-determined. Top-right = both. Bottom-left = barely ambiguous at all. Where
+the cloud sits tells you what a finer grid would need to fix — more aim
+resolution vs a tie-break rule between clubs.
+
+```{r ambig-driver-bar, fig.width=8, fig.height=4}
+driver_df |>
+  count(driver) |>
+  mutate(pct = round(100 * n / sum(n), 1)) |>
+  ggplot(aes(n, fct_rev(driver), fill = driver)) +
+  geom_col() +
+  geom_text(aes(label = glue::glue("{n}  ({pct}%)")), hjust = -0.1, size = 3.4) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+  scale_fill_manual(values = c(reproducible = "#2e7d32", minimal = "#9e9e9e",
+                               aim = "#1565c0", club = "#c62828",
+                               `club & aim` = "#6a1b9a"), guide = "none") +
+  labs(x = "# grid points", y = NULL,
+       title = "Every grid point classified by what drives its ambiguity")
+
+driver_df |>
+  count(driver, name = "n_grid_points") |>
+  mutate(pct = round(100 * n_grid_points / sum(n_grid_points), 1)) |>
+  kable(caption = "Ambiguity driver — grid-point counts")
+```
+
+**What this shows.** All 280 grid points bucketed by the rule in the setup
+chunk: `reproducible` (Jaccard ≥ 0.80), then `club` / `aim` / `club & aim`
+depending on which instability crosses its threshold, else `minimal`.
+
+**Read it as.** This is the one-line answer to "is it club or aim?". If the
+`aim` bar dominates, the equivalence-set ambiguity is almost entirely about aim
+resolution — the model knows the club, and a finer aim grid (or reporting aim as
+a tolerance band) would resolve most of it. A large `club` bar would instead
+mean genuinely different clubs are tied and the recommendation has to name a
+set. `club & aim` points are the messiest and worth listing individually.
+
+---
+
+# Course-context maps
+
+The same results with the hole drawn underneath, so location on the hole is
+legible. Geometry comes from `export_hole_geometry.py` (same game coordinates as
+the strategy grid).
+
+```{r course-setup}
+geom_raw   <- read_csv(file.path(data_dir, "hole_geometry.csv"), show_col_types = FALSE)
+hole_sf    <- st_as_sf(geom_raw, wkt = "wkt")
+hole_polys <- hole_sf |> filter(!lie %in% c("tee", "pin"))
+hole_marks <- hole_sf |> filter(lie %in% c("tee", "pin"))
+
+ob_bounds  <- read_csv(file.path(data_dir, "ob_bounds.csv"), show_col_types = FALSE) |>
+  deframe()   # named vector: ob_x_left, ob_x_right, ob_y_far
+
+# Fixed view spanning all three OB lines — grid points only reach y ~284, well
+# short of ob_y_far, so without this the "past the bunkers" line would be
+# clipped out of view on any plot built from grid-point data.
+hole_bbox <- st_bbox(hole_sf)
+plot_xlim <- c(ob_bounds["ob_x_left"] - 5, ob_bounds["ob_x_right"] + 5)
+plot_ylim <- c(min(hole_bbox["ymin"], 0) - 5, ob_bounds["ob_y_far"] + 10)
+
+lie_fill <- c(green = "#a8d5a2", fairway = "#8bc34a",
+              rough = "#5d8a3a", water = "#5db7e8", bunker = "#e8dcae")
+
+hole_layer <- function() {
+  list(
+    # OB regions first, so course geometry draws on top
+    annotate("rect", xmin = -Inf, xmax = ob_bounds["ob_x_left"], ymin = -Inf, ymax = Inf,
+             fill = "firebrick", alpha = 0.15),
+    annotate("rect", xmin = ob_bounds["ob_x_right"], xmax = Inf, ymin = -Inf, ymax = Inf,
+             fill = "firebrick", alpha = 0.15),
+    annotate("rect", xmin = -Inf, xmax = Inf, ymin = ob_bounds["ob_y_far"], ymax = Inf,
+             fill = "firebrick", alpha = 0.15),
+    geom_vline(xintercept = c(ob_bounds["ob_x_left"], ob_bounds["ob_x_right"]),
+               colour = "firebrick", linetype = 2, linewidth = 0.4),
+    geom_hline(yintercept = ob_bounds["ob_y_far"], colour = "firebrick", linetype = 2, linewidth = 0.4),
+    geom_sf(data = hole_polys, aes(fill = lie), colour = NA, alpha = 0.85,
+            inherit.aes = FALSE),
+    geom_sf(data = hole_marks, aes(shape = lie), size = 2.6, stroke = 1,
+            colour = "black", fill = "white", inherit.aes = FALSE),
+    scale_fill_manual(values = lie_fill, name = "lie", guide = guide_legend(order = 2)),
+    scale_shape_manual(values = c(tee = 15, pin = 21), name = NULL),
+    coord_sf(xlim = plot_xlim, ylim = plot_ylim, expand = FALSE),
+    theme(axis.title = element_blank())
+  )
+}
+```
+
+## Cross-seed agreement and equivalence-set size, on the hole
+
+```{r course-maps, fig.width=13, fig.height=9}
+pj <- ggplot() + hole_layer() +
+  geom_point(data = map_df, aes(x, y, colour = mean_jaccard), size = 2.6) +
+  scale_colour_viridis_c(limits = c(0, 1), name = "cross-seed\nJaccard",
+                         guide = guide_colourbar(order = 1)) +
+  labs(title = "Where do the seeds agree?")
+
+ps <- ggplot() + hole_layer() +
+  geom_point(data = map_df, aes(x, y, colour = mean_equiv_size), size = 2.6) +
+  scale_colour_viridis_c(option = "magma", direction = -1, name = "mean |E*|",
+                         guide = guide_colourbar(order = 1)) +
+  labs(title = "Where are the tied-best sets large?")
+
+pj + ps
+```
+
+**What this shows.** The two headline per-grid-point quantities from the "side by
+side hole maps" section, now overlaid on the actual hole — green, fairway,
+rough, water, bunkers, tee (square) and pin (circle).
+
+**Read it as.** Now you can attribute the pattern to course features: e.g.
+low-agreement / large-`|E*|` points sitting in the wide part of the fairway
+(many landing spots score the same), or hugging a water margin (a knife-edge
+where a few yards of aim flip the outcome). Points over or just short of the
+green will read differently from points 150+ yд out.
+
+## The ambiguous cluster and the never-stabilised points
+
+```{r course-hotspots, fig.width=9, fig.height=10}
+nonconv_pts <- equiv_nonconv |> distinct(x, y) |> mutate(kind = "never stabilised")
+
+ggplot() + hole_layer() +
+  geom_point(data = point_spread, aes(x, y, colour = agreement), size = 2.8) +
+  geom_point(data = nonconv_pts, aes(x, y), shape = 4, size = 3.5, stroke = 1.1,
+             colour = "black") +
+  scale_colour_manual(values = c("clear (J >= 0.80)" = "#2e7d32",
+                                 "mixed (0.50-0.80)" = "#f9a825",
+                                 "ambiguous (J < 0.50)" = "#c62828"),
+                      name = "agreement class") +
+  labs(title = "Ambiguity classes on the hole",
+       subtitle = "x = grid point where >=1 seed never stabilised by N = 500")
+```
+
+**What this shows.** Every grid point coloured by agreement class (green / amber
+/ red), with a black **×** on the points that also failed Test 1 for at least one
+seed.
+
+**Read it as.** If the red points and the ×'s form a compact cluster in one area,
+that region is the single driver of both non-reproducibility and
+non-stabilisation — worth describing explicitly in the write-up (what is there:
+hazard, fairway width, distance band). Scattered red points with no × are
+"stably ambiguous": each seed settles, they just settle differently.
+
+## Equivalence-set aim spread at the hardest points
+
+```{r course-aimspread, fig.width=9, fig.height=10}
+worst_members <- eq500 |>
+  inner_join(select(worst9, x, y), by = c("x", "y")) |>
+  group_by(x, y, club, aim_offset) |>
+  summarise(n_seeds = n(), .groups = "drop") |>
+  filter(n_seeds >= 5)   # drop 1-off fringe picks for legibility
+
+ggplot() + hole_layer() +
+  geom_segment(data = worst_members,
+               aes(x = x, y = y, xend = x + aim_offset, yend = y + 12,
+                   colour = club, alpha = n_seeds),
+               linewidth = 0.7) +
+  geom_point(data = distinct(worst_members, x, y),
+             aes(x, y), colour = "black", size = 2) +
+  scale_alpha(range = c(0.25, 1), name = "# seeds") +
+  labs(title = "Aim spread of the equivalence set at the 9 worst grid points",
+       subtitle = "each ray = a (club, aim) tied for best; length along x is the aim offset (yards)")
+```
+
+**What this shows.** For the 9 least-reproducible grid points, a fan of short
+rays from the point — one per (club, aim) that appears in ≥ 5 seeds' `E*` —
+coloured by club, faded by how many seeds picked it. The horizontal reach of a
+ray is its aim offset in yards.
+
+**Read it as.** A tight fan of one colour = the seeds basically agree on club and
+are only nudging aim; a wide multi-colour fan = genuinely different plays are all
+live. Placed on the hole, you can see whether the aim spread straddles a hazard
+or stays safely on grass — that determines whether "just pick any member of
+`E*`" is actually safe advice at that point.
+

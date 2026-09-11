@@ -33,7 +33,7 @@ import torch
 from scipy.interpolate import interp1d
 from shapely import wkt as shapely_wkt
 from shapely.affinity import rotate as shp_rotate, translate as shp_translate
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, box
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +88,9 @@ class HoleData:
     broadie_interpolators: dict[str, object]
     putt_model: _PuttGPModel
     putt_likelihood: gpytorch.likelihoods.GaussianLikelihood
+    ob_x_left: float                       # x < this is out-of-bounds
+    ob_x_right: float                      # x > this is out-of-bounds
+    ob_y_far: float                        # y > this (past the bunkers) is out-of-bounds
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +225,22 @@ def build_hole(
     water_polygons = _get_polygons(hole_9, "water_hazard") + list(new_hazard3["geometry"])
 
     # ------------------------------------------------------------------
+    # 7b. Out-of-bounds lines + flush the water's right edge to the OB line
+    #     (long approaches were "gaming" the evaluation by landing past the
+    #     water on the right, where there was no penalty at all).
+    # ------------------------------------------------------------------
+    ob_x_left = -40.0
+    ob_x_right = 60.0
+    ob_y_far = max(p.bounds[3] for p in bunker_polygons) + 10.0
+
+    if water_polygons:
+        i_rightmost = max(range(len(water_polygons)), key=lambda i: water_polygons[i].bounds[2])
+        rp = water_polygons[i_rightmost]
+        x0, y0, x1, y1 = rp.bounds
+        if x1 < ob_x_right:
+            water_polygons[i_rightmost] = rp.union(box(x1 - 5.0, y0 - 5.0, ob_x_right, y1 + 5.0))
+
+    # ------------------------------------------------------------------
     # 8. Strategy grid (approach-shot evaluation points)
     # ------------------------------------------------------------------
     hole_vec = np.array(hole_pin)
@@ -328,6 +347,9 @@ def build_hole(
         broadie_interpolators=broadie_interpolators,
         putt_model=putt_model,
         putt_likelihood=putt_likelihood,
+        ob_x_left=ob_x_left,
+        ob_x_right=ob_x_right,
+        ob_y_far=ob_y_far,
     )
 
 
@@ -346,6 +368,12 @@ def get_lie_category(point: tuple[float, float], hole: HoleData) -> str:
     if any(poly.contains(pt) for poly in hole.fairway_polygons):
         return "fairway"
     return "rough"
+
+
+def is_out_of_bounds(point: tuple[float, float], hole: HoleData) -> bool:
+    """OB: left of x=ob_x_left, right of x=ob_x_right, or past y=ob_y_far (behind the bunkers)."""
+    x, y = point
+    return x < hole.ob_x_left or x > hole.ob_x_right or y > hole.ob_y_far
 
 
 # ---------------------------------------------------------------------------
@@ -536,6 +564,15 @@ def simulate_approach_shots(
             np.array(target) - np.array(playing_location)
         ))
 
+        # OB value: Broadie expected-strokes-to-hole-out from the shot's ORIGIN
+        # (playing_location), plus a 1-stroke penalty. Fixed per grid point —
+        # computed once here, not per shot. Since it's always worse than a
+        # playable shot from the same spot, an OB-prone combo can never win.
+        ob_lie = {"bunker": "sand"}.get(starting_lie, starting_lie)
+        if ob_lie not in hole.broadie_interpolators:
+            ob_lie = "rough"
+        ob_value = evaluate_broadie(playing_location, target, ob_lie, hole.broadie_interpolators) + 1.0
+
         # Club shortlist (Driver always excluded — approach shots only).
         # For long approaches (> 150 yd to the pin) the carry-proximity heuristic
         # is unreliable, so evaluate every non-Driver club; for shorter shots keep
@@ -572,9 +609,12 @@ def simulate_approach_shots(
                         float(shot[0]), float(shot[1]),
                         angle_deg, playing_location, target,
                     )
-                    es = evaluate_shot(lp, playing_location, target, hole)
-                    if not np.isnan(es):
-                        new_strokes.append(es)
+                    if is_out_of_bounds(lp, hole):
+                        new_strokes.append(ob_value)
+                    else:
+                        es = evaluate_shot(lp, playing_location, target, hole)
+                        if not np.isnan(es):
+                            new_strokes.append(es)
 
                 # --- Merge with accumulated shots from prior iterations ---
                 prior = accumulator.get(key, np.array([], dtype=np.float32))
@@ -689,6 +729,19 @@ def plot_hole_layout(
     if plot_strategy_points:
         xs, ys = zip(*hole.strategy_points)
         ax.scatter(xs, ys, color="black", s=15, alpha=0.4, zorder=10, label="Grid")
+
+    # Out-of-bounds regions (shaded, drawn last so limits are set from the
+    # geometry above, then re-applied so the OB shading doesn't expand the view)
+    xlim, ylim = ax.get_xlim(), ax.get_ylim()
+    mx, my = (xlim[1] - xlim[0]) * 0.15, (ylim[1] - ylim[0]) * 0.1
+    ax.axvspan(xlim[0] - mx, hole.ob_x_left, color=_LIE_COLORS["OB"], alpha=0.35, zorder=1, label="OB")
+    ax.axvspan(hole.ob_x_right, xlim[1] + mx, color=_LIE_COLORS["OB"], alpha=0.35, zorder=1)
+    ax.axhspan(hole.ob_y_far, ylim[1] + my, color=_LIE_COLORS["OB"], alpha=0.35, zorder=1)
+    for v in (hole.ob_x_left, hole.ob_x_right):
+        ax.axvline(v, color="firebrick", linestyle="--", linewidth=1, zorder=2)
+    ax.axhline(hole.ob_y_far, color="firebrick", linestyle="--", linewidth=1, zorder=2)
+    ax.set_xlim(xlim[0] - mx, xlim[1] + mx)
+    ax.set_ylim(ylim[0], ylim[1] + my)
 
     ax.set_aspect("equal")
     ax.set_title(title)
