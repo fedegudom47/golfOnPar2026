@@ -34,7 +34,7 @@ import pandas as pd
 import torch
 from shapely import wkt as shapely_wkt
 from shapely.affinity import rotate as shp_rotate, translate as shp_translate
-from shapely.geometry import Point
+from shapely.geometry import Point, box
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,9 @@ class BirdieHoleData:
     rough_distributions: dict[str, dict]
     birdie_model: _BirdieGreenModel
     birdie_likelihood: gpytorch.likelihoods.BernoulliLikelihood
+    ob_x_left: float                       # x < this is out-of-bounds
+    ob_x_right: float                      # x > this is out-of-bounds
+    ob_y_far: float                        # y > this (past the bunkers) is out-of-bounds
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +224,21 @@ def build_hole_birdie(
     )
 
     # ------------------------------------------------------------------
+    # 7b. Out-of-bounds lines + flush the water's right edge to the OB line
+    #     (identical convention to core.py's ESHO scheme).
+    # ------------------------------------------------------------------
+    ob_x_left = -40.0
+    ob_x_right = 60.0
+    ob_y_far = max(p.bounds[3] for p in bunker_polygons) + 10.0
+
+    if water_polygons:
+        i_rightmost = max(range(len(water_polygons)), key=lambda i: water_polygons[i].bounds[2])
+        rp = water_polygons[i_rightmost]
+        x0, y0, x1, y1 = rp.bounds
+        if x1 < ob_x_right:
+            water_polygons[i_rightmost] = rp.union(box(x1 - 5.0, y0 - 5.0, ob_x_right, y1 + 5.0))
+
+    # ------------------------------------------------------------------
     # 8. Strategy grid
     # ------------------------------------------------------------------
     hole_vec    = np.array(hole_pin)
@@ -320,6 +338,9 @@ def build_hole_birdie(
         rough_distributions=rough_distributions,
         birdie_model=birdie_model,
         birdie_likelihood=birdie_likelihood,
+        ob_x_left=ob_x_left,
+        ob_x_right=ob_x_right,
+        ob_y_far=ob_y_far,
     )
 
 
@@ -338,6 +359,12 @@ def get_lie_category(point: tuple[float, float], hole: BirdieHoleData) -> str:
     if any(poly.contains(pt) for poly in hole.fairway_polygons):
         return "fairway"
     return "rough"
+
+
+def is_out_of_bounds(point: tuple[float, float], hole: BirdieHoleData) -> bool:
+    """OB: left of x=ob_x_left, right of x=ob_x_right, or past y=ob_y_far (behind the bunkers)."""
+    x, y = point
+    return x < hole.ob_x_left or x > hole.ob_x_right or y > hole.ob_y_far
 
 
 # ---------------------------------------------------------------------------
@@ -439,6 +466,8 @@ def simulate_approach_shots_birdie(
                 "var_birdie_prob":  0.0,
                 "n_total":          0,
             })
+            water_key = (starting_point[0], starting_point[1], "Driver", 0.0)
+            new_accumulator[water_key] = [0.0]
             continue
 
         total_distance = float(np.linalg.norm(
@@ -479,7 +508,10 @@ def simulate_approach_shots_birdie(
                         float(shot[0]), float(shot[1]),
                         angle_deg, starting_point, target,
                     )
-                    if get_lie_category(lp, hole) == "green":
+                    if is_out_of_bounds(lp, hole):
+                        # Same treatment as water: a birdie is impossible from OB.
+                        p = 0.0
+                    elif get_lie_category(lp, hole) == "green":
                         p = evaluate_birdie_prob(lp, hole.birdie_model, hole.birdie_likelihood)
                     else:
                         p = 0.0
@@ -593,6 +625,20 @@ def _plot_hole_layout(hole: BirdieHoleData, title: str, ax: object) -> None:
 
     ax.plot(hole.tee_point[0], hole.tee_point[1], "rx", markersize=7, label="Tee")
     ax.plot(hole.hole[0], hole.hole[1], "ko", markersize=5, label="Hole")
+
+    # Out-of-bounds regions (shaded, drawn last so limits are set from the
+    # geometry above, then re-applied so the OB shading doesn't expand the view)
+    xlim, ylim = ax.get_xlim(), ax.get_ylim()
+    mx, my = (xlim[1] - xlim[0]) * 0.15, (ylim[1] - ylim[0]) * 0.1
+    ax.axvspan(xlim[0] - mx, hole.ob_x_left, color=_LIE_COLORS.get("OB", "lightcoral"), alpha=0.35, zorder=1, label="OB")
+    ax.axvspan(hole.ob_x_right, xlim[1] + mx, color=_LIE_COLORS.get("OB", "lightcoral"), alpha=0.35, zorder=1)
+    ax.axhspan(hole.ob_y_far, ylim[1] + my, color=_LIE_COLORS.get("OB", "lightcoral"), alpha=0.35, zorder=1)
+    for v in (hole.ob_x_left, hole.ob_x_right):
+        ax.axvline(v, color="firebrick", linestyle="--", linewidth=1, zorder=2)
+    ax.axhline(hole.ob_y_far, color="firebrick", linestyle="--", linewidth=1, zorder=2)
+    ax.set_xlim(xlim[0] - mx, xlim[1] + mx)
+    ax.set_ylim(ylim[0], ylim[1] + my)
+
     ax.set_aspect("equal")
     ax.set_title(title)
     ax.grid(True, linestyle=":")
