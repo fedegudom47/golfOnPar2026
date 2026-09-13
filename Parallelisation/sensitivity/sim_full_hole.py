@@ -268,6 +268,20 @@ def _draw_hole_background(hole: HoleData, ax: plt.Axes) -> None:
 
     ax.plot(*hole.tee_point, "rx", ms=8, label="Tee")
     ax.plot(*hole.hole,      "ko", ms=6, label="Pin")
+
+    # Out-of-bounds regions (same convention as core.py::plot_hole_layout)
+    if hasattr(hole, "ob_x_left"):
+        xlim, ylim = ax.get_xlim(), ax.get_ylim()
+        mx, my = (xlim[1] - xlim[0]) * 0.15, (ylim[1] - ylim[0]) * 0.1
+        ax.axvspan(xlim[0] - mx, hole.ob_x_left, color=_LIE_COLORS.get("OB", "lightcoral"), alpha=0.35, zorder=1, label="OB")
+        ax.axvspan(hole.ob_x_right, xlim[1] + mx, color=_LIE_COLORS.get("OB", "lightcoral"), alpha=0.35, zorder=1)
+        ax.axhspan(hole.ob_y_far, ylim[1] + my, color=_LIE_COLORS.get("OB", "lightcoral"), alpha=0.35, zorder=1)
+        for v in (hole.ob_x_left, hole.ob_x_right):
+            ax.axvline(v, color="firebrick", linestyle="--", linewidth=1, zorder=2)
+        ax.axhline(hole.ob_y_far, color="firebrick", linestyle="--", linewidth=1, zorder=2)
+        ax.set_xlim(xlim[0] - mx, xlim[1] + mx)
+        ax.set_ylim(ylim[0], ylim[1] + my)
+
     ax.set_aspect("equal")
     ax.grid(True, linestyle=":", linewidth=0.4)
 
