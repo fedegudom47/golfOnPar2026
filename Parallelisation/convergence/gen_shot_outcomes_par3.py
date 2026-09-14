@@ -131,18 +131,18 @@ fig.subplots_adjust(hspace=0.3)
 cmap = "viridis_r"
 
 for ax, (aim, landings, esho) in zip(axes, results):
+    # Translucent course fill — same alpha as final images/course_overlay_variants.py's
+    # "translucent" style, kept consistent across every course-view figure.
     for _, row in hole_9_raw.iterrows():
         geom = affine_transform(row["geometry"], ROT)
         color = core._LIE_COLORS.get(row["lie"], "lightgrey")
         polys = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
         for poly in polys:
             x, y = poly.exterior.xy
-            ax.fill(x, y, alpha=0.5, fc=color, ec="black", linewidth=0.5)
+            ax.fill(x, y, alpha=0.18, fc=color, ec="black", linewidth=0.5, zorder=0)
 
     ox, oy = rot_pt(tee_point)
     px, py = rot_pt(pin)
-    ax.plot(ox, oy, marker="s", color="black", markersize=8, linestyle="None", label="Tee")
-    ax.plot(px, py, "ko", markersize=5, label="Hole", markerfacecolor="white", markeredgecolor="black")
 
     angle_deg = float(np.degrees(np.arctan(aim / total_distance)))
     angle_rad = np.radians(angle_deg)
@@ -163,6 +163,13 @@ for ax, (aim, landings, esho) in zip(axes, results):
     rl = np.array([rot_pt(p) for p in landings])
     sc = ax.scatter(rl[:, 0], rl[:, 1], c=esho, cmap=cmap, vmin=vmin, vmax=vmax,
                      s=28, edgecolors="k", linewidths=0.3, zorder=10)
+
+    # Tee + pin drawn LAST so they always sit on top of the shots (standing
+    # convention: black square tee, white/black-edge pin).
+    ax.plot(ox, oy, marker="s", color="black", markersize=8, linestyle="None",
+            label="Tee", zorder=30)
+    ax.plot(px, py, "o", markersize=7, label="Hole", zorder=30,
+            markerfacecolor="white", markeredgecolor="black", markeredgewidth=1.3)
 
     mean_esho = float(np.nanmean(esho))
     ax.set_title(f"{CLUB} | Aim {aim:+.0f} yd | Mean ESHO: {mean_esho:.2f}")
