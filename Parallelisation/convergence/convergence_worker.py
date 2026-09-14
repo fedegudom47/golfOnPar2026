@@ -57,7 +57,7 @@ class WorkerConfig:
     """All tunable parameters for the simulation sweep."""
     n_start: int   = 10       # initial shots per grid point
     n_step: int    = 10       # additional shots per iteration
-    n_max: int     = 500      # sweep runs to this N (no early stopping — see equivalence.py)
+    n_max: int     = 1200     # sweep runs to this N (no early stopping — see equivalence.py)
     aim_range: tuple[float, float] = (-40.0, 40.0)
     aim_step: float = 5.0
     gp_training_iter: int = 100
@@ -422,7 +422,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir",    type=Path, default=Path("outputs"))
     p.add_argument("--n-start",       type=int,   default=10)
     p.add_argument("--n-step",        type=int,   default=10)
-    p.add_argument("--n-max",         type=int,   default=500)
+    p.add_argument("--n-max",         type=int,   default=1200)
     p.add_argument("--aim-step",      type=float, default=5.0)
     p.add_argument("--gp-iter",       type=int,   default=100)
     p.add_argument("--equiv-e",       type=float, default=1.0,

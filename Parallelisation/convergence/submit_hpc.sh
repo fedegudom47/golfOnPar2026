@@ -18,18 +18,18 @@
 REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"              # 
 
 # Number of seeds to run (array indices 0 … N_SEEDS-1)
-N_SEEDS=100
+N_SEEDS=50
 
 # Simulation sweep parameters (convergence is assessed afterward as
 # post-processing — see run_equivalence_analysis.py)
 N_START=10
 N_STEP=10
-N_MAX=500
+N_MAX=1200
 AIM_STEP=5.0
 GP_ITER=100
 
 # Slurm resource limits per task
-TIME_LIMIT="120:00:00"    # wall-clock time per seed (adjust if needed)
+TIME_LIMIT="288:00:00"    # wall-clock time per seed (scaled with N_MAX=1200; was 120:00:00 at N_MAX=500)
 MEM_PER_CPU="8G"
 CPUS_PER_TASK=1
 

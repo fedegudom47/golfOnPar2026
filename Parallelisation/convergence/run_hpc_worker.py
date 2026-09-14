@@ -20,7 +20,7 @@ Example (called by submit_hpc.sh):
         --seed $SLURM_ARRAY_TASK_ID \\
         --data-dir /path/to/repo/Parallelisation/data \\
         --output-dir /path/to/repo/Parallelisation/convergence/outputs \\
-        --n-max 500 --n-step 10
+        --n-max 1200 --n-step 10
 
 Example HPC test (called by submit_hpc_test.sh):
     python run_hpc_worker.py \\
@@ -56,7 +56,7 @@ def _parse_args() -> argparse.Namespace:
                    help="Root directory for outputs (seed sub-dirs + logs).")
     p.add_argument("--n-start",       type=int,   default=10)
     p.add_argument("--n-step",        type=int,   default=10)
-    p.add_argument("--n-max",         type=int,   default=500)
+    p.add_argument("--n-max",         type=int,   default=1200)
     p.add_argument("--aim-step",      type=float, default=5.0)
     p.add_argument("--gp-iter",       type=int,   default=100,
                    help="GPyTorch training iterations for the putting GPR.")
