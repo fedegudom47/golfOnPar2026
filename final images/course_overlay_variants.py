@@ -24,23 +24,24 @@ MFGP_DIR = ROOT / "Multi-Fidelity GP"
 PIN = (5.0, 334.0)
 N_SIMULATIONS = 300
 
-# Fixed integer-stroke -> colour mapping, same style family as the putting-green
-# sample figure (sampledPutts.png: green=good/low, through to red=bad/high),
-# extended over the wider range of full-swing outcomes. A given stroke count
-# always gets the same colour across every figure, regardless of which subset
-# of values that particular figure happens to show. Values beyond the table
-# fall back to a distinct colour of their own rather than reusing one above.
+# Fixed integer-stroke -> colour mapping. First three values are the exact
+# hex the sampledPutts.png reference uses (best/lowest = green, through to
+# worst/highest); 5 and 6 are simulatingpar3script.py's putt_color_map
+# ("red", "brown") converted to hex, continuing the same reference. Nothing
+# beyond that was defined anywhere, so 7+ get new, mutually distinct colours
+# rather than reusing "purple" for everything past 5 the way that script did.
+# A given stroke count always gets the same colour across every figure,
+# regardless of which subset of values that particular figure happens to show.
 STROKE_COLORS = {
-    1: "#006837",
-    2: "#1a9850",
-    3: "#66bd63",
-    4: "#a6d96a",
-    5: "#d9ef8b",
-    6: "#fee08b",
-    7: "#fdae61",
-    8: "#f46d43",
-    9: "#d73027",
-    10: "#a50026",
+    2: "#349d34",
+    3: "#92d3e3",
+    4: "#ffa503",
+    5: "#ff0000",   # matplotlib "red"
+    6: "#a52a2a",   # matplotlib "brown"
+    7: "#800080",   # matplotlib "purple"
+    8: "#4b0082",   # indigo
+    9: "#2f4f4f",   # dark slate
+    10: "#000000",  # black
 }
 _EXTRA_CMAP = plt.get_cmap("cool")
 
@@ -157,8 +158,8 @@ def plot_low_fidelity(hole, style: str) -> Path:
     x_min, x_max, y_min, y_max = course_bounds(hole)
     ax.set_xlim(y_min - 15, y_max + 15)
     ax.set_ylim(x_min - 12, x_max + 12)
-    ax.set_xlabel("Distance to pin (yards)", fontsize=11)
-    ax.set_ylabel("Left / right offset (yards)", fontsize=11)
+    ax.set_xlabel("$x_1$ (yards)", fontsize=11)
+    ax.set_ylabel("$x_2$ (yards)", fontsize=11)
     ax.set_title(f"Low-Fidelity Simulated ESHO Grid  (N={N_SIMULATIONS}, aim -40..40y step 4y)"
                  f"  —  {style}", fontsize=12, fontweight="bold")
     ax.grid(True, linestyle=":", linewidth=0.5, alpha=0.4, zorder=1)
@@ -190,15 +191,15 @@ def plot_high_fidelity(hole, style: str) -> Path:
         ax.text(r["x2"], r["x1"], f"{n}", ha="center", va="center",
                 fontsize=12, fontweight="bold", color=stroke_color(n),
                 zorder=10,
-                path_effects=[pe.withStroke(linewidth=2.2, foreground="white", alpha=0.85)])
+                path_effects=[pe.withStroke(linewidth=2.2, foreground="black", alpha=0.85)])
 
     draw_markers(ax, hole)
     ax.axvline(PIN[1], color="black", linestyle="--", linewidth=0.8, alpha=0.5, zorder=1)
     x_min, x_max, y_min, y_max = course_bounds(hole)
     ax.set_xlim(y_min - 15, y_max + 15)
     ax.set_ylim(x_min - 12, x_max + 12)
-    ax.set_xlabel("Distance to pin (yards)", fontsize=11)
-    ax.set_ylabel("Left / right offset (yards)", fontsize=11)
+    ax.set_xlabel("$x_1$ (yards)", fontsize=11)
+    ax.set_ylabel("$x_2$ (yards)", fontsize=11)
     ax.set_title(f"High-Fidelity Observed Strokes  (n={len(obs_sub)} of {len(obs)} shown)"
                  f"  —  {style}", fontsize=12, fontweight="bold")
     ax.grid(True, linestyle=":", linewidth=0.5, alpha=0.4, zorder=1)

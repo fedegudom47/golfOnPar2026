@@ -21,8 +21,8 @@ from generate_observed_data import (
 # Same fixed integer-stroke palette as final images/course_overlay_variants.py —
 # kept in sync by hand since that module lives in a space-containing path.
 STROKE_COLORS = {
-    1: "#006837", 2: "#1a9850", 3: "#66bd63", 4: "#a6d96a", 5: "#d9ef8b",
-    6: "#fee08b", 7: "#fdae61", 8: "#f46d43", 9: "#d73027", 10: "#a50026",
+    2: "#349d34", 3: "#92d3e3", 4: "#ffa503", 5: "#ff0000", 6: "#a52a2a",
+    7: "#800080", 8: "#4b0082", 9: "#2f4f4f", 10: "#000000",
 }
 _EXTRA_CMAP = plt.get_cmap("cool")
 
@@ -67,18 +67,19 @@ for hs in HOTSPOTS:
 draw_pin(ax1)
 ax1.set_aspect("equal")
 ax1.set_title(r"$\mathcal{D}_L$ — Simulated ESHO surface")
-ax1.set_xlabel("x (yards)"); ax1.set_ylabel("y (yards)")
+ax1.set_xlabel("$x_1$ (yards)"); ax1.set_ylabel("$x_2$ (yards)")
 ax1.legend(fontsize=8)
 
 # ── D_H: sparse observed-stroke proxy (discrete per-stroke colours, same
 #    fixed table as fig2_high_fidelity_course_translucent.png) ──────────────
 _draw_polygons(ax3, polygons, alpha=0.25)
 colors = [stroke_color(int(n)) for n in df["observed_strokes"]]
-ax3.scatter(df["x1"], df["x2"], c=colors, s=22, alpha=0.9, edgecolors="none")
+ax3.scatter(df["x1"], df["x2"], c=colors, s=26, alpha=0.9,
+            edgecolors="black", linewidths=0.5)
 draw_pin(ax3)
 ax3.set_aspect("equal")
 ax3.set_title(r"$\mathcal{D}_H$ — Observed strokes-to-hole-out ($n$=%d)" % len(df))
-ax3.set_xlabel("x (yards)"); ax3.set_ylabel("y (yards)")
+ax3.set_xlabel("$x_1$ (yards)"); ax3.set_ylabel("$x_2$ (yards)")
 
 present = sorted(int(v) for v in df["observed_strokes"].unique())
 stroke_handles = [plt.Line2D([0], [0], marker="o", linestyle="None",
