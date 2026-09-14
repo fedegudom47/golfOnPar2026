@@ -2,6 +2,8 @@
 
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
@@ -87,7 +89,11 @@ ax.grid(True, linestyle='-', alpha=0.6)
 # Legend formatting
 handles, labels = ax.get_legend_handles_labels()
 # Reverse legend to have Driver at top if desired, or keep as is (Shortest to Longest)
-ax.legend(handles[::-1], labels[::-1], title="Shot", bbox_to_anchor=(1.02, 1), loc='upper left')
+# ncol=2 splits the 19 entries into two side-by-side columns instead of one tall
+# column, so the legend stays readable when the figure is shrunk vertically.
+ax.legend(handles[::-1], labels[::-1], title="Shot", bbox_to_anchor=(1.02, 1),
+          loc='upper left', ncol=2, columnspacing=1.0, fontsize=10, title_fontsize=11)
 
 plt.tight_layout()
-plt.show()
+plt.savefig('untitled folder/On_Par/images/LPGAShots.png', dpi=150, bbox_inches='tight')
+print("saved LPGAShots.png")
