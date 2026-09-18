@@ -20,7 +20,7 @@ Example (called by submit_hpc.sh):
         --seed $SLURM_ARRAY_TASK_ID \\
         --data-dir /path/to/repo/Parallelisation/data \\
         --output-dir /path/to/repo/Parallelisation/convergence/outputs \\
-        --n-max 1200 --n-step 10
+        --n-max 2000 --n-step 10
 
 Example HPC test (called by submit_hpc_test.sh):
     python run_hpc_worker.py \\
@@ -56,8 +56,14 @@ def _parse_args() -> argparse.Namespace:
                    help="Root directory for outputs (seed sub-dirs + logs).")
     p.add_argument("--n-start",       type=int,   default=10)
     p.add_argument("--n-step",        type=int,   default=10)
-    p.add_argument("--n-max",         type=int,   default=1200)
-    p.add_argument("--aim-step",      type=float, default=5.0)
+    p.add_argument("--n-max",         type=int,   default=2000)
+    p.add_argument("--aim-step",      type=float, default=5.0,
+                   help="Fixed-yard aim step (unused while --aim-angle-step is active).")
+    p.add_argument("--aim-angle-range", type=float, nargs=2, default=[-40.0, 40.0],
+                   help="Fixed-angle aim grid, degrees. See --no-aim-angle to use the old fixed-yard grid.")
+    p.add_argument("--aim-angle-step",  type=float, default=5.0)
+    p.add_argument("--no-aim-angle",    action="store_true",
+                   help="Use the old fixed-yard aim grid (--aim-range/--aim-step) instead of fixed-angle.")
     p.add_argument("--gp-iter",       type=int,   default=100,
                    help="GPyTorch training iterations for the putting GPR.")
     p.add_argument("--equiv-e",       type=float, default=1.0,
@@ -105,6 +111,8 @@ def main() -> None:
         n_step=args.n_step,
         n_max=args.n_max,
         aim_step=args.aim_step,
+        aim_angle_range=None if args.no_aim_angle else tuple(args.aim_angle_range),
+        aim_angle_step=args.aim_angle_step,
         gp_training_iter=args.gp_iter,
         equiv_e=args.equiv_e,
         k_consecutive=args.k_consecutive,

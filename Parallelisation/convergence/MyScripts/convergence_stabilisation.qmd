@@ -99,6 +99,28 @@ ggplot(stabilisation_seed, aes(N, pct_stable_ever * 100, group = seed)) +
 
 **Read it as.** This curve is the simulation-budget cost function: the `N` where the mean line flattens near 100% is the point of diminishing returns. A wide fan between the thin lines means the required budget is unpredictable run-to-run; a tight fan means it is well-determined.
 
+## % of points stabilised vs N — NOW (the strict, non-cumulative version)
+
+```{r within-pct-now, fig.width=9, fig.height=5.5}
+ggplot(stabilisation_seed, aes(N, pct_stable_now * 100, group = seed)) +
+  geom_line(alpha = 0.15, colour = "#D55E00") +
+  stat_summary(aes(group = 1), fun = mean, geom = "line",
+               linewidth = 1.3, colour = "black") +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(x = "N (shots per grid point)",
+       y = "% of grid points stable right now",
+       title = "Within-seed stabilisation over N — NOW",
+       subtitle = "same seeds as above, but pct_stable_now: is E* unchanged vs N-10, at this N specifically")
+```
+
+**Labelled for direct comparison with the EVER plot above.** `pct_stable_now`
+is *not* cumulative and can go down as well as up — a point counts here only
+if its `E*` is unchanged from the previous `N` step, right now. This is the
+metric the "in plain terms" diagram further down is actually about: EVER
+climbs to ~100%, NOW plateaus well below it, and the gap between the two
+curves at large `N` *is* the flickering-tie phenomenon made visible as a
+percentage rather than a single point's time series.
+
 ## Three stabilisation signals (mean across seeds)
 
 ```{r within-signals, fig.width=9, fig.height=5}
@@ -131,6 +153,37 @@ sets stop changing step-to-step. "Stabilised" lags it (needs 3 good steps in a
 row). "E\* size 1" is a *different question*: a perfectly stable set can still
 have size > 1 (a genuine tie). If "size 1" plateaus well below "stabilised",
 that gap is real strategic ambiguity — more shots will not remove it.
+
+## Three stabilisation signals — NOW (the strict, non-cumulative version)
+
+```{r within-signals-now, fig.width=9, fig.height=5}
+stabilisation_N |>
+  select(N,
+         `stable right now (E* == prev N)` = mean_pct_stable_now,
+         `E* collapsed to a single option` = mean_pct_equiv_size1,
+         `Jaccard of E* vs previous N` = mean_jaccard_vs_prev) |>
+  pivot_longer(-N, names_to = "signal", values_to = "value") |>
+  ggplot(aes(N, value * 100, colour = signal)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 1) +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(x = "N", y = "%", colour = NULL,
+       title = "Within-seed convergence signals vs N — NOW version",
+       subtitle = "'stabilised (ever)' swapped for 'stable right now' — everything else identical to the plot above")
+```
+
+**Labelled for direct comparison with the EVER version above.** Same three
+signals, same seeds, same `N` axis — only the first line changed, from
+"has this point *ever* passed the 3-consecutive test" to "is this point's
+`E*` unchanged from the *immediately preceding* `N` step". Where the EVER
+line keeps climbing toward 100%, the NOW line plateaus around 75% at
+`N = 500` — noticeably *below* the Jaccard-vs-prev line (~93%), not close to
+it: Jaccard is a continuous similarity score that gives partial credit for
+near-matches, while "stable now" is a strict binary exact-match, so it's the
+stricter and more honest of the two. That ~25-point gap between NOW and
+100% at large `N` is the flickering described in the Conclusions and "In
+plain terms" sections below, expressed as a population percentage rather
+than a single point's time series.
 
 ## Per-seed: N at which the whole seed stabilised
 
@@ -877,21 +930,30 @@ non-stabilisation — worth describing explicitly in the write-up (what is there
 hazard, fairway width, distance band). Scattered red points with no × are
 "stably ambiguous": each seed settles, they just settle differently.
 
-## Equivalence-set aim spread at the hardest points
+## Equivalence-set aim spread and landing spots
 
-```{r course-aimspread, fig.width=9, fig.height=10}
-worst_members <- eq500 |>
+**Data provenance, to be explicit:** every plot in this subsection is built
+from `eq500` — the actual HPC output, `outputs/seed*/seed*_N0500_equivset.csv`
+for all **100 seeds**, pooled together at `N = 500`. It is not one seed's run;
+`n_seeds` in each plot literally counts how many of the 100 independent seeds
+included that exact (club, aim) in their equivalence set. Nothing here is
+simulated fresh — it's a re-read of the real convergence-study output.
+
+### Aim-offset fan (by angle) — the 9 worst grid points
+
+```{r course-aimspread-rays, fig.width=9, fig.height=10}
+worst_members_rays <- eq500 |>
   inner_join(select(worst9, x, y), by = c("x", "y")) |>
   group_by(x, y, club, aim_offset) |>
   summarise(n_seeds = n(), .groups = "drop") |>
-  filter(n_seeds >= 5)   # drop 1-off fringe picks for legibility
+  filter(n_seeds >= 5)
 
 ggplot() + hole_layer() +
-  geom_segment(data = worst_members,
+  geom_segment(data = worst_members_rays,
                aes(x = x, y = y, xend = x + aim_offset, yend = y + 12,
                    colour = club, alpha = n_seeds),
                linewidth = 0.7) +
-  geom_point(data = distinct(worst_members, x, y),
+  geom_point(data = distinct(worst_members_rays, x, y),
              aes(x, y), colour = "black", size = 2) +
   scale_alpha(range = c(0.25, 1), name = "# seeds") +
   labs(title = "Aim spread of the equivalence set at the 9 worst grid points",
@@ -901,11 +963,587 @@ ggplot() + hole_layer() +
 **What this shows.** For the 9 least-reproducible grid points, a fan of short
 rays from the point — one per (club, aim) that appears in ≥ 5 seeds' `E*` —
 coloured by club, faded by how many seeds picked it. The horizontal reach of a
-ray is its aim offset in yards.
+ray is its aim offset in yards, not a real landing position.
 
 **Read it as.** A tight fan of one colour = the seeds basically agree on club and
 are only nudging aim; a wide multi-colour fan = genuinely different plays are all
-live. Placed on the hole, you can see whether the aim spread straddles a hazard
-or stays safely on grass — that determines whether "just pick any member of
-`E*`" is actually safe advice at that point.
+live.
 
+⚠️ **This schematic is directionally misleading and shouldn't be read as "which
+way the shot goes."** `xend = x + aim_offset` is a naive offset — it does not
+account for the true bearing from the grid point to the pin. Checked directly:
+for **46 of these 132 (club, aim) combos (35%)**, the naive ray points
+left/right **opposite** to where the shot actually lands once the real
+rotation toward the pin is applied (e.g. the pin sits at `x=5`, so a point at
+`x=-40` needs a large rightward rotation just to aim at the pin at all — a
+positive `aim_offset` there can still finish left of where this schematic
+draws it). The two "worst 9" plots you compared **are the same 132 rows of
+data** (verified identical) — only this ray's endpoint is wrong. The corrected
+version below fixes that.
+
+```{r course-aimspread-setup}
+worst_members <- eq500 |>
+  inner_join(select(worst9, x, y), by = c("x", "y")) |>
+  group_by(x, y, club, aim_offset) |>
+  summarise(n_seeds = n(), .groups = "drop") |>
+  filter(n_seeds >= 5)   # drop 1-off fringe picks for legibility
+
+club_means <- read_csv("../../data/simulated_lpga_shot_data2.csv", show_col_types = FALSE) |>
+  group_by(Club) |>
+  summarise(mean_side = mean(Side), mean_carry = mean(Carry), .groups = "drop")
+
+pin_xy <- hole_marks |> filter(lie == "pin") |> st_coordinates()
+pin_x  <- pin_xy[1, "X"]; pin_y <- pin_xy[1, "Y"]
+
+# same rotation as core.py::rotation_translator, applied to the club's MEAN
+# (Side, Carry) instead of a Monte Carlo draw -> the average landing spot
+worst_landing <- worst_members |>
+  left_join(club_means, by = c("club" = "Club")) |>
+  mutate(
+    total_dist = sqrt((pin_x - x)^2 + (pin_y - y)^2),
+    angle_rad  = if_else(total_dist > 0, atan(aim_offset / total_dist), 0),
+    rot_x  = cos(angle_rad) * mean_side - sin(angle_rad) * mean_carry,
+    rot_y  = sin(angle_rad) * mean_side + cos(angle_rad) * mean_carry,
+    unit_x = (pin_x - x) / total_dist,
+    unit_y = (pin_y - y) / total_dist,
+    land_x = x + unit_x * rot_y - unit_y * rot_x,
+    land_y = y + unit_y * rot_y + unit_x * rot_x,
+  )
+```
+
+### Aim-offset fan, corrected (true bearing) — the 9 worst grid points
+
+```{r course-aimspread-rays-fixed, fig.width=9, fig.height=10}
+worst_direction <- worst_landing |>
+  mutate(
+    vec_x = land_x - x, vec_y = land_y - y,
+    vec_len = sqrt(vec_x^2 + vec_y^2),
+    short_x = x + vec_x / vec_len * 15,   # truncated to a fixed 15 yd stub,
+    short_y = y + vec_y / vec_len * 15,   # same visual scale as the naive fan above
+  )
+
+ggplot() + hole_layer() +
+  geom_segment(data = worst_direction,
+               aes(x = x, y = y, xend = short_x, yend = short_y, colour = club, alpha = n_seeds),
+               linewidth = 0.7) +
+  geom_point(data = distinct(worst_direction, x, y),
+             aes(x, y), colour = "black", size = 2) +
+  scale_alpha(range = c(0.25, 1), name = "# seeds") +
+  labs(title = "Aim spread of the equivalence set, true bearing toward the pin",
+       subtitle = "same 132 (club, aim) rows as the schematic above — this time the ray direction is real")
+```
+
+**What this shows.** The identical data as the naive fan, but each ray is now
+a 15 yd stub cut from the *actual* rotated landing vector (the same
+computation the landing-spot plot uses), not `x + aim_offset`. Same colours,
+same rows — the direction is now trustworthy, and this ray is exactly the
+first 15 yards of the corresponding dot's segment in the plot below.
+
+**Read it as.** Compare this to the naive version above at the same 9 points —
+notice several fans visibly flip orientation once the true bearing is applied
+(most obviously at points far from `x = 5`, where the naive schematic's
+left/right has the least in common with reality). Trust this one, and the
+"Mean landing spot" plot next — not the first ray-fan.
+
+### Mean landing spot — the 9 worst grid points
+
+Rather than just the aim *angle*, this computes the real mean landing spot of
+each tied-best (club, aim) — using that club's average (Side, Carry) from the
+LPGA shot data (`simulated_lpga_shot_data2.csv`), rotated the same way
+`core.py::rotation_translator` does — so you can see where the "average"
+outcome of each competing option actually finishes on the course. (`worst_landing`
+was already computed above, for the corrected fan — reused here as-is.)
+
+```{r course-aimspread, fig.width=9, fig.height=10}
+ggplot() + hole_layer() +
+  geom_segment(data = worst_landing,
+               aes(x = x, y = y, xend = land_x, yend = land_y, colour = club, alpha = n_seeds),
+               linewidth = 0.4) +
+  geom_point(data = worst_landing,
+             aes(land_x, land_y, colour = club, size = n_seeds), alpha = 0.85) +
+  geom_point(data = distinct(worst_landing, x, y),
+             aes(x, y), colour = "black", size = 2, shape = 17) +
+  scale_alpha(range = c(0.2, 0.7), guide = "none") +
+  scale_size_continuous(range = c(1.5, 4), name = "# seeds") +
+  labs(title = "Mean landing spot of every tied-best (club, aim), at the 9 worst grid points",
+       subtitle = "triangle = the grid point itself; dot = where that club/aim lands on average; thin line traces dot back to its origin")
+```
+
+**What this shows.** For the 9 least-reproducible grid points (black triangles),
+every (club, aim) that appears in ≥ 5 seeds' `E*`, plotted not as an aim angle
+but as its actual **mean landing position** — the club's average carry and side
+miss (from the raw LPGA data), rotated toward the pin by that aim offset,
+exactly like the real shot simulation does, just using the mean instead of a
+random draw. Colour = club, dot size = how many seeds picked it, thin line =
+which origin point it belongs to (several origins are close together on this
+hole, so the traceback line matters).
+
+**Read it as.** This is the direct answer to "if I just play any member of
+`E*`, where does the ball end up?" A tight cluster of dots = the tied options
+all land in basically the same spot regardless of which one is picked — safe
+to treat as interchangeable. Dots spread across the fairway/rough boundary, or
+near the water/OB shading, mean the "tied" options are not equally safe *in
+practice* even though they score the same in expectation — worth a second look
+before treating `E*` as freely interchangeable advice.
+
+### Mean landing spot — every grid point, batched by row
+
+All 280 grid points at once would be an unreadable smear, so this walks the
+strategy grid **3 y-rows at a time** (28 rows -> 10 batches, ~30 origins and
+~100-250 dots each), same landing-spot construction as above, applied to every
+point rather than just the worst 9. Same `n_seeds >= 5` legibility filter — a
+grid point with no dots in its batch means every seed's pick there got fewer
+than 5 votes each (i.e. total disagreement across many near-unique choices,
+itself worth noting).
+
+```{r course-aimspread-all-batches, fig.width=9, fig.height=10}
+all_pts <- distinct(eq500, x, y)
+y_vals  <- sort(unique(all_pts$y))
+row_batches <- split(y_vals, ceiling(seq_along(y_vals) / 3))
+
+for (b in seq_along(row_batches)) {
+  batch_y <- row_batches[[b]]
+
+  batch_members <- eq500 |>
+    filter(y %in% batch_y) |>
+    group_by(x, y, club, aim_offset) |>
+    summarise(n_seeds = n(), .groups = "drop") |>
+    filter(n_seeds >= 5)
+
+  batch_landing <- batch_members |>
+    left_join(club_means, by = c("club" = "Club")) |>
+    mutate(
+      total_dist = sqrt((pin_x - x)^2 + (pin_y - y)^2),
+      angle_rad  = if_else(total_dist > 0, atan(aim_offset / total_dist), 0),
+      rot_x  = cos(angle_rad) * mean_side - sin(angle_rad) * mean_carry,
+      rot_y  = sin(angle_rad) * mean_side + cos(angle_rad) * mean_carry,
+      unit_x = (pin_x - x) / total_dist,
+      unit_y = (pin_y - y) / total_dist,
+      land_x = x + unit_x * rot_y - unit_y * rot_x,
+      land_y = y + unit_y * rot_y + unit_x * rot_x,
+    )
+
+  p <- ggplot() + hole_layer() +
+    geom_segment(data = batch_landing,
+                 aes(x = x, y = y, xend = land_x, yend = land_y, colour = club, alpha = n_seeds),
+                 linewidth = 0.3) +
+    geom_point(data = batch_landing,
+               aes(land_x, land_y, colour = club, size = n_seeds), alpha = 0.8) +
+    geom_point(data = distinct(batch_landing, x, y),
+               aes(x, y), colour = "black", size = 1.6, shape = 17) +
+    scale_alpha(range = c(0.15, 0.6), guide = "none") +
+    scale_size_continuous(range = c(1, 3.5), name = "# seeds") +
+    labs(title = glue::glue("Mean landing spots — rows y = {round(min(batch_y))}-{round(max(batch_y))}  (batch {b}/{length(row_batches)})"),
+         subtitle = "triangle = grid point; dot = mean landing spot of a tied-best (club, aim), colour = club")
+
+  print(p)
+}
+```
+
+**What this shows.** The same mean-landing-spot construction as the worst-9
+plot, run for every one of the 280 grid points, split into 10 panels by
+strategy-grid row so each panel stays legible. Scanning top to bottom moves
+from the tee-ward rows to the green-ward rows.
+
+**Read it as.** Compare panels: rows where the equivalence-set dots cluster
+tightly (little colour variety, landing spots close together) are the
+"solved" parts of the hole; rows with wide multi-colour scatter, or dots
+sitting near the water/OB shading, are where the strategy is still genuinely
+contested. This is the spatial complement to the `equiv_spatial_map.png` /
+cross-seed Jaccard maps earlier in the report — those tell you *how much*
+ambiguity there is per point, this shows *what it looks like on the ground*.
+
+---
+
+# Conclusions: why do some points never fully settle — even with equivalence sets, not a single arg-min?
+
+The whole point of switching from "track the single best (club, aim)" to
+"track the *set* of statistically tied-best options" was to stop penalising
+the model for a problem that isn't really there: two combinations that score
+the same shouldn't be treated as a disagreement. That mechanism works — a
+genuine tie, once both members are in `E*`, has no reason to ever leave: if
+two options are truly equal, there's no force pushing either one's estimate
+away from the other, so a stable set should just keep recurring.
+
+So a flat surface cannot, by itself, explain why 20/280 grid points still
+never lock onto a stable `E*` by `N = 500` (mean cross-seed agreement
+~0.51 Jaccard). Saying "the surface is flat" is necessary context, but it
+is not yet a mechanism — the actual driver is more specific than that, and
+it's worth being precise about it because the two things that follow
+(flatness, and a shrinking threshold) are not independent, compounding
+causes; they are one mechanism described from two ends.
+
+**The real mechanism: hard-threshold membership testing does not converge for a true (or near-true) tie.**
+`E*` is defined relative to `SE_min`, which *shrinks* as `N` grows. For an
+option that is genuinely *worse* than the best, its estimated gap from
+`R_min` grows relative to that shrinking `SE_min` as `N` increases — more
+samples make a real difference more visible, so it exits `E*` decisively and
+stays out. But for an option whose *true* value ties the best, there is no
+such signal to sharpen: its estimated gap from `R_min` is driven entirely by
+sampling noise of the same order as `SE_min` itself, at every `N`. The ratio
+(estimated gap) / `SE_min` never concentrates — it just keeps re-randomising
+as more samples come in, so the option drifts in and out of `E*`
+indefinitely. This is not a flaw in the equivalence-set logic or the
+simulation; it is a known, unresolved case in ranking-and-selection
+statistics (the "indifference zone" problem: the sample size needed to
+guarantee a stable selection literally diverges as the true gap between two
+options goes to zero). A hard `Jaccard = 1`-for-3-steps test is, by
+construction, exactly the kind of rule this hits.
+
+Where does "the surface is flat" fit in, then? It's the reason so many
+options are *close enough* to the best for this to bite in the first place.
+From the equivalence-set anatomy earlier: even at points classed "ambiguous"
+by cross-seed Jaccard, the *actual* ESHO spread inside `E*` tops out around
+**0.02 strokes** — several adjacent aim values are, for practical purposes,
+indistinguishable. And it's overwhelmingly an **aim-tie**, not a club-tie
+(204/280 points classified "aim-driven" vs. 21 "club-driven" ambiguity) —
+the model reliably identifies the right club; the 5 yd aim discretisation is
+what leaves multiple near-identical options in contention, each one a
+candidate for the flickering described above. Flatness sets up *how many*
+options are vulnerable to this; it doesn't by itself cause any single one of
+them to flicker.
+
+**A second, genuinely distinct mechanism: rare, large-magnitude OB events add heavy-tailed noise exactly at that boundary.**
+Confirmed directly (see the OB exposure diagnostic): at the specific 20
+non-converged points, near-optimal combos do carry small (0.1-5%) real OB
+probability, and the OB penalty is large relative to the otherwise tiny
+residual noise there (`gap` of 0.4-1.2 strokes vs. `SE_min` of
+0.003-0.015 strokes). A combination whose long-run mean should sit just
+inside `E*` will occasionally draw one unlucky OB shot in a given `N`-step's
+new sample and jump by roughly one `SE_min` — enough to (temporarily) exit
+the set. This is a textbook symptom of estimating a mean under a
+low-probability, high-magnitude mixture: the empirical mean's sampling
+distribution is right-skewed, so it converges to "stable" more slowly than
+the implicit Gaussian assumption behind `SE = sqrt(var/n)` expects, even
+though nothing about the estimate is wrong.
+
+**Net read:** none of this points to a defect in the OB logic, the
+equivalence-set definition, or the simulation itself — it's two real,
+identifiable sources of residual ambiguity: (1) a hard SE-relative
+membership test that structurally cannot converge for a true or near-true
+tie, made relevant at these particular points because the aim discretisation
+leaves several options within an indifference zone of each other, and
+(2) rare OB tail events colliding with an otherwise very low-noise estimate.
+They show up at the same handful of long-range points because that's exactly
+where the aim grid is coarsest relative to the angular precision needed
+(feeding (1)) and where OB is reachable at all (feeding (2)). If reducing
+the residual matters more than understanding it, the highest-leverage lever
+is a finer aim grid (or reporting the *centroid* of `E*` rather than any
+single member) — that shrinks the indifference zone itself, rather than
+trying to out-sample or out-threshold a tie that, by construction, no amount
+of additional simulation resolves.
+
+---
+
+# Correction: the OB fix did not change these results — the earlier motivating claim was based on a bad plot
+
+The story used to introduce the OB logic elsewhere (including earlier
+drafting of the paper's methods section) was: *shots were escaping past the
+water hazard into an unpenalised "free" zone, artificially destabilising the
+argmin at long-range grid points; adding the boundary + penalty closes that
+gap and the numbers above are the corrected picture.* That causal claim
+needs to be withdrawn.
+
+The evidence for "shots were escaping unpenalised" came from a boundary
+visualisation that was itself drawn incorrectly — a plotting error, not a
+finding about the simulation. Once that is accounted for, there is no basis
+left to claim the OB fix changed the convergence behaviour reported in this
+document; the honest expectation is that the stabilisation and cross-seed
+agreement numbers above are **the same, to within simulation noise, as they
+would have been without the fix.** The two mechanisms explaining residual
+non-convergence in the Conclusions section hold regardless — neither
+depends on the OB fix having changed anything.
+
+This does **not** mean the OB fix was pointless. It is still the correct
+thing to have in the model: a shot travelling out of bounds should score a
+stroke-and-distance penalty, full stop, independent of whether it happens to
+move any convergence statistic. The fix should be kept and described in the
+paper — just on its own merits (rule-correctness), not as an explanation for
+the residual non-convergence documented above. The two-mechanism account
+in the Conclusions section is the actual explanation, and it would apply
+identically with or without OB in the model.
+
+**What to change in the paper draft as a result:** the framing that
+introduces OB (methods) should not claim it was "diagnosed as a source of
+the non-convergence" or that the study was "re-run" to correct that specific
+problem — that motivating narrative doesn't hold up. State plainly instead
+that OB was added because it is a rules-correctness gap (a shot going out of
+bounds must be penalised, and the pre-fix model didn't do that), independent
+of the convergence analysis, and that the convergence numbers in Results
+reflect the current, correct model rather than a "before vs. after OB"
+comparison.
+
+
+---
+
+# In plain terms
+
+Skip the statistics jargon above — here's the same finding in plain
+language, with a picture.
+
+Imagine two golfers' shots are genuinely, truly equally good — same expected
+score, no difference at all. We want to know: does our test ever settle down
+and say "yes, these two are tied, done"? You'd think the answer is
+automatically yes. It isn't, and here's why.
+
+Every time we simulate more shots, two things happen at once: our estimate
+of each option's score gets a little more precise, **and** the "close enough
+to count as tied" tolerance we use gets a little *stricter* (it has to — a
+looser tolerance would call almost everything tied). For an option that's
+truly *worse*, this is fine: more simulation makes the gap more obvious
+faster than the tolerance tightens, so it clearly and permanently fails the
+test. But for an option that's truly *tied*, there is no real gap for more
+simulation to reveal — the tiny difference we measure between two truly
+equal options is 100% random noise, and that noise shrinks at roughly the
+same rate as the tolerance does. So the coin never stops flipping: at any
+given amount of simulation, the tied option might happen to measure just
+inside the tolerance, or just outside it, by pure chance — forever. That's
+not our test failing; it's what happens whenever you ask a strict yes/no
+question about two things that don't actually differ.
+
+```{r plain-terms-diagram, fig.width=9, fig.height=5, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(42)
+
+N <- seq(10, 500, by = 10)
+n_len <- length(N)
+se_band <- 0.35 / sqrt(N)              # the shrinking "close enough" tolerance
+
+# A truly tied option: pure noise on the same scale as the band, every step
+tied_gap  <- rnorm(n_len, mean = 0, sd = se_band)
+# A genuinely worse option: a small but real gap, buried in noise early on,
+# that becomes obvious as the noise (not the true gap) shrinks
+worse_gap <- 0.28 + rnorm(n_len, mean = 0, sd = se_band * 0.5)
+
+df <- tibble(
+  N = rep(N, 2),
+  gap = c(tied_gap, worse_gap),
+  band = rep(se_band, 2),
+  option = rep(c("Truly tied with the best", "Genuinely a bit worse"), each = n_len)
+)
+
+ggplot(df, aes(N, gap)) +
+  geom_ribbon(aes(ymin = -band, ymax = band), fill = "grey70", alpha = 0.35) +
+  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
+  geom_line(aes(colour = option), linewidth = 0.9) +
+  facet_wrap(~option, ncol = 1) +
+  scale_colour_manual(values = c("Truly tied with the best" = "#0072B2",
+                                  "Genuinely a bit worse" = "#D55E00"), guide = "none") +
+  labs(
+    title = "Why a true tie never settles, but a real gap does",
+    subtitle = "Grey band = the shrinking 'close enough to count as tied' tolerance",
+    x = "N (simulated shots)",
+    y = "Estimated gap from the best option"
+  ) +
+  theme(strip.text = element_text(face = "bold"))
+```
+
+**Read the picture as:** the grey band is the tolerance, shrinking left to
+right as we simulate more. The orange line (a real, small difference) starts
+inside the band but climbs steadily out of it and stays out — more data
+resolved a real question. The blue line (a true tie) has no such trend: it
+just wanders randomly above and below zero, inside and outside the
+shrinking band, no matter how far right you go. That's the entire
+mechanism, visualised — and it's also why the honest fix is a *finer aim
+grid* (fewer truly-tied options to begin with), not more simulation of the
+same grid.
+
+---
+
+# Testing a new hypothesis: the fixed-yard aim grid's angular resolution shrinks with distance
+
+**The diagnosis.** Every grid point tests the same fixed set of aim offsets
+in *yards* (`-40, -35, ..., 35, 40`). But the simulation converts an aim
+offset to an *angle* via `atan(aim_offset / total_dist)` — and for a fixed
+yardage, that angle shrinks as `total_dist` grows. Concretely: at 40yd from
+the pin, adjacent 5yd aim steps are ~7° apart; at 290yd, they're ~2° apart.
+Far from the pin, the tested options are almost the same direction by
+construction — no wonder they're hard to tell apart.
+
+```{r aim-fan-setup}
+pin_x <- 5; pin_y <- 334
+aim_grid <- seq(-40, 40, by = 5)
+stub_len <- 10
+
+stability_pts <- gridpoints |> select(x, y) |> distinct() |>
+  left_join(cross_at_max |> select(x, y, mean_jaccard), by = c("x", "y"))
+
+fan_all <- stability_pts |>
+  crossing(aim_offset = aim_grid) |>
+  mutate(
+    total_dist = sqrt((pin_x - x)^2 + (pin_y - y)^2),
+    unit_x = (pin_x - x) / total_dist,
+    unit_y = (pin_y - y) / total_dist,
+    angle_rad = atan(aim_offset / total_dist),
+    dir_x = cos(angle_rad) * unit_x - sin(angle_rad) * unit_y,
+    dir_y = sin(angle_rad) * unit_x + cos(angle_rad) * unit_y,
+    xend = x + dir_x * stub_len,
+    yend = y + dir_y * stub_len
+  )
+```
+
+## All tested aim directions, every grid point, coloured by stability
+
+```{r aim-fan-all, fig.width=10, fig.height=11}
+ggplot() +
+  geom_segment(data = fan_all, aes(x = x, y = y, xend = xend, yend = yend, colour = mean_jaccard),
+               linewidth = 0.35, alpha = 0.6) +
+  geom_point(data = stability_pts, aes(x, y, colour = mean_jaccard), size = 0.8) +
+  scale_colour_viridis_c(name = "cross-seed\nJaccard\n(stability)", limits = c(0, 1)) +
+  coord_fixed() +
+  labs(title = "Tested aim directions at every grid point (-40..+40y, 5y step), true bearing to pin",
+       subtitle = "each stub = one tested aim_offset, fixed 10y length; colour = cross-seed agreement at N=500",
+       x = "x (yards)", y = "y (yards)")
+```
+
+**What this shows.** Every one of the 280 grid points, with its full tested
+aim grid drawn as a fan of short rays in the *true* direction (same
+rotation as the corrected fan earlier — this reuses that fix), coloured by
+how well the 100 seeds agree at that point.
+
+**Read it as.** Near the top of the grid (close to the pin) the fans are
+wide open umbrellas — the 17 tested directions are clearly, widely
+separated — and they're mostly yellow/green (high agreement). Toward the
+bottom (far from the pin) the fans collapse to something close to a single
+line — the tested directions are nearly indistinguishable — and the colour
+drops toward purple (low agreement). The visual pattern is the diagnosis.
+
+## Quantifying it: angular fan width vs distance, and vs stability
+
+```{r aim-fan-width, fig.width=8.5, fig.height=5.5}
+fan_width <- fan_all |>
+  filter(aim_offset %in% c(-40, 40)) |>
+  select(x, y, total_dist, mean_jaccard, aim_offset, angle_rad) |>
+  pivot_wider(names_from = aim_offset, values_from = angle_rad, names_prefix = "ang_") |>
+  mutate(fan_width_deg = (`ang_40` - `ang_-40`) * 180 / pi)
+
+ggplot(fan_width, aes(total_dist, fan_width_deg, colour = mean_jaccard)) +
+  geom_point(size = 2.2) +
+  scale_colour_viridis_c(name = "cross-seed\nJaccard", limits = c(0, 1)) +
+  labs(title = "Angular resolution of the fixed-yard aim grid vs distance to pin",
+       subtitle = "fan_width_deg = angle between the aim=-40y and aim=+40y rays; colour = stability",
+       x = "distance from grid point to pin (yards)", y = "angular fan width (degrees)")
+```
+
+```{r aim-fan-cor}
+tibble(
+  comparison = c("fan width vs distance", "fan width vs stability (Jaccard)",
+                 "distance vs stability (Jaccard)"),
+  correlation = c(
+    cor(fan_width$fan_width_deg, fan_width$total_dist),
+    cor(fan_width$fan_width_deg, fan_width$mean_jaccard),
+    cor(fan_width$total_dist, fan_width$mean_jaccard)
+  )
+) |> kable(digits = 3, caption = "Pearson correlation across the 280 grid points")
+```
+
+**What this shows.** The top-left curve is a pure geometric fact — no
+noise, it's just `atan()` — the angular gap between the extreme tested aim
+offsets falls from ~78° near the pin to ~16° at the far end of the grid. The
+colour on that same plot is the empirical stability at each point, and the
+correlation table quantifies both relationships at once.
+
+**Read it as.** The diagnosis holds up, honestly stated: fan width vs
+stability correlates at **r ≈ 0.64** — a real, moderately strong
+relationship, visible directly in the first plot as the colour gradient
+running top-to-bottom with the fan width. It is not a perfect 1-to-1
+explanation (r would be ~1 if it were) — points at similar distances still
+show some colour scatter, meaning other point-specific factors (hazard
+proximity, OB exposure) also contribute, consistent with the two-mechanism
+account earlier in this document. But the aim grid's shrinking angular
+resolution is a real, substantial, and previously undocumented contributor
+to why long-range points are harder to pin down — a finer aim grid
+specifically at longer range (rather than uniformly across all 280 points)
+would be the most targeted fix.
+
+## Proposed fix: a fixed-angle aim grid instead of a fixed-yard one
+
+**The change.** Replace the fixed-yard `aim_offset` grid with a fixed-*angle*
+grid, and derive the yard offset per point instead of the other way round:
+
+$$\theta \in \{-40°, -35°, \dots, 35°, 40°\} \qquad \text{aim\_offset}(d) = d \cdot \tan(\theta)$$
+
+**This is what's now actually implemented** in `core.py::simulate_approach_shots`
+(the `aim_angle_range`/`aim_angle_step` parameters, on by default in
+`convergence_worker.py`/`run_hpc_worker.py` — see `--no-aim-angle` to fall
+back to the old fixed-yard grid). 17 angles spanning $\pm 40°$ in $5°$
+steps — the same option count as the original fixed-yard grid, but now with
+constant angular resolution at every distance instead of resolution that
+shrinks far from the pin: two earlier, more aggressively pruned drafts
+(±16°/2°, then ±30°/5°, then ±30°/10°) were considered and rejected in
+favour of this one, which keeps near-green steps close to the original
+~5-yard granularity the yard grid gave there, while still fixing the
+far-range crowding. Mechanically this is still a
+*simplification*,
+not an added step: `core.py`'s `rotation_translator` already consumes an
+angle, not a yard offset — the yard offset only ever existed so that
+`angle_deg = atan(aim_offset / total_dist)` could produce one. A fixed-angle
+grid skips that conversion entirely; if a yard label is still wanted for
+reporting, it is now the *derived* quantity, computed once per point from
+the fixed angle.
+
+```{r fixed-angle-setup}
+theta_deg <- seq(-40, 40, by = 5)   # matches core.py's default: 17 angles, +-40 deg, 5 deg step
+theta_rad <- theta_deg * pi / 180
+
+fan_fixed_angle <- stability_pts |>
+  crossing(theta_deg = theta_deg) |>
+  mutate(
+    total_dist = sqrt((pin_x - x)^2 + (pin_y - y)^2),
+    theta_rad  = theta_deg * pi / 180,
+    aim_offset_yd = total_dist * tan(theta_rad),  # derived, not fixed
+    unit_x = (pin_x - x) / total_dist,
+    unit_y = (pin_y - y) / total_dist,
+    dir_x  = cos(theta_rad) * unit_x - sin(theta_rad) * unit_y,
+    dir_y  = sin(theta_rad) * unit_x + cos(theta_rad) * unit_y,
+    xend = x + dir_x * stub_len,
+    yend = y + dir_y * stub_len
+  )
+
+# per-point labels: the max (=|min|, symmetric) yard offset actually tested,
+# and what one 5 deg step corresponds to in yards at that point's distance
+point_labels <- stability_pts |>
+  mutate(
+    total_dist   = sqrt((pin_x - x)^2 + (pin_y - y)^2),
+    max_offset_yd  = total_dist * tan(40 * pi / 180),
+    step_offset_yd = total_dist * tan(5 * pi / 180),
+    label = sprintf("+-%.0fy\nstep %.1fy", max_offset_yd, step_offset_yd)
+  )
+```
+
+```{r fixed-angle-plot, fig.width=11, fig.height=13}
+ggplot() +
+  geom_segment(data = fan_fixed_angle, aes(x = x, y = y, xend = xend, yend = yend, colour = mean_jaccard),
+               linewidth = 0.45, alpha = 0.6) +
+  geom_point(data = stability_pts, aes(x, y, colour = mean_jaccard), size = 0.8) +
+  geom_text(data = point_labels, aes(x, y, label = label), size = 1.55, vjust = 2.3,
+            lineheight = 0.85, colour = "grey20") +
+  scale_colour_viridis_c(name = "cross-seed\nJaccard\n(stability)", limits = c(0, 1)) +
+  coord_fixed() +
+  labs(title = "As implemented: fixed +-40 deg / 5 deg-step aim grid (17 clearly distinct options everywhere)",
+       subtitle = "fan width is now angle-constant by construction; label at each point = max yd offset tested (+-) and yd/step at that distance",
+       x = "x (yards)", y = "y (yards)")
+```
+
+**Read it as.** Directly underneath the diagnostic plot above: same points,
+same colour scale, same stub length — but every fan is now the same
+*angular* width, keeping the same 17-option count as the original fixed-yard
+grid instead of the more aggressively pruned 7-option ±30°/10° draft
+considered above. Near the pin the window is ~±42y with a ~4.4y step
+(close to the original fixed grid's own ~5-yard granularity there, so
+near-green resolution barely changes); far from the pin the window opens
+out to ~±243y with a ~25.3y step — considerably wider than the old fixed
+±40y, on purpose: several of those extreme far-range options will be
+obviously bad (off the fairway, OB) and should exit the equivalence set
+decisively rather than hover near it, which is exactly the well-behaved
+case in the "why a true tie never settles" mechanism above.
+
+```{r fixed-angle-range-table}
+point_labels |>
+  summarise(
+    `min distance (yd)` = min(total_dist), `max distance (yd)` = max(total_dist),
+    `max offset at min dist (yd)` = min(max_offset_yd), `max offset at max dist (yd)` = max(max_offset_yd),
+    `step at min dist (yd)` = min(step_offset_yd), `step at max dist (yd)` = max(step_offset_yd)
+  ) |>
+  pivot_longer(everything(), names_to = "quantity", values_to = "value") |>
+  kable(digits = 1, caption = "Range of implied yard offsets/steps across the 280-point grid under the fixed +-40 deg / 5 deg grid now implemented in core.py")
+```

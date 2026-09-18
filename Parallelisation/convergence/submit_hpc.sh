@@ -24,12 +24,21 @@ N_SEEDS=50
 # post-processing — see run_equivalence_analysis.py)
 N_START=10
 N_STEP=10
-N_MAX=1200
-AIM_STEP=5.0
+N_MAX=2000
 GP_ITER=100
+# Aim grid: fixed-angle by default now (run_hpc_worker.py's own --aim-angle-range/
+# --aim-angle-step default to -40..40 deg / 5 deg step = 17 options — same option
+# count as the old fixed-yard grid, but constant angular resolution at every
+# distance instead of shrinking far from the pin — see
+# MyScripts/convergence_stabilisation.qmd, "Testing a new hypothesis" /
+# "Proposed fix"). Nothing to set here unless you want to override those
+# defaults or fall back to the old grid with --no-aim-angle.
 
 # Slurm resource limits per task
-TIME_LIMIT="288:00:00"    # wall-clock time per seed (scaled with N_MAX=1200; was 120:00:00 at N_MAX=500)
+TIME_LIMIT="480:00:00"    # wall-clock time per seed, scaled with N_MAX=2000 (was
+                           # 288:00:00 at N_MAX=1200); option count is unchanged
+                           # (17) so no offsetting savings from the aim grid this
+                           # time — kept conservative rather than tight
 MEM_PER_CPU="8G"
 CPUS_PER_TASK=1
 
@@ -81,7 +90,6 @@ python3 run_hpc_worker.py \\
     --n-start ${N_START} \\
     --n-step  ${N_STEP}  \\
     --n-max   ${N_MAX}   \\
-    --aim-step ${AIM_STEP} \\
     --gp-iter  ${GP_ITER}
 
 echo "=== Task \${SLURM_ARRAY_TASK_ID} finished at \$(date) ==="

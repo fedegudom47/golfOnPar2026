@@ -57,9 +57,17 @@ class WorkerConfig:
     """All tunable parameters for the simulation sweep."""
     n_start: int   = 10       # initial shots per grid point
     n_step: int    = 10       # additional shots per iteration
-    n_max: int     = 1200     # sweep runs to this N (no early stopping — see equivalence.py)
-    aim_range: tuple[float, float] = (-40.0, 40.0)
+    n_max: int     = 2000     # sweep runs to this N (no early stopping — see equivalence.py)
+    aim_range: tuple[float, float] = (-40.0, 40.0)   # unused while aim_angle_range is set below
     aim_step: float = 5.0
+    # Fixed-angle aim grid (degrees) — replaces the fixed-yard grid above.
+    # See MyScripts/convergence_stabilisation.qmd, "Testing a new hypothesis" /
+    # "Proposed fix": a fixed yard step's ANGULAR resolution shrinks with
+    # distance from the pin, so far-range points were effectively testing
+    # near-duplicate directions. Fixed angle keeps resolution constant;
+    # set aim_angle_range=None to fall back to the old fixed-yard grid.
+    aim_angle_range: Optional[tuple[float, float]] = (-40.0, 40.0)
+    aim_angle_step: float = 5.0
     gp_training_iter: int = 100
     early_stop_N: Optional[int] = None  # cut short (for quick tests)
     carry_shift_yards: float = 0.0      # added to mean carry of all clubs
@@ -330,6 +338,8 @@ def run_convergence(
             accumulator=accumulator,
             aim_range=config.aim_range,
             aim_step=config.aim_step,
+            aim_angle_range=config.aim_angle_range,
+            aim_angle_step=config.aim_angle_step,
             return_all_candidates=True,
         )
 
@@ -422,8 +432,14 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir",    type=Path, default=Path("outputs"))
     p.add_argument("--n-start",       type=int,   default=10)
     p.add_argument("--n-step",        type=int,   default=10)
-    p.add_argument("--n-max",         type=int,   default=1200)
-    p.add_argument("--aim-step",      type=float, default=5.0)
+    p.add_argument("--n-max",         type=int,   default=2000)
+    p.add_argument("--aim-step",      type=float, default=5.0,
+                   help="Fixed-yard aim step (unused while --aim-angle-step is active).")
+    p.add_argument("--aim-angle-range", type=float, nargs=2, default=[-40.0, 40.0],
+                   help="Fixed-angle aim grid, degrees. Pass --no-aim-angle to use the old fixed-yard grid instead.")
+    p.add_argument("--aim-angle-step",  type=float, default=5.0)
+    p.add_argument("--no-aim-angle",    action="store_true",
+                   help="Use the old fixed-yard aim grid (--aim-range/--aim-step) instead of fixed-angle.")
     p.add_argument("--gp-iter",       type=int,   default=100)
     p.add_argument("--equiv-e",       type=float, default=1.0,
                    help="SE multiplier for the equivalence band (E* = R<=R_min+e*SE_min).")
@@ -448,6 +464,8 @@ if __name__ == "__main__":
         n_step=args.n_step,
         n_max=args.n_max,
         aim_step=args.aim_step,
+        aim_angle_range=None if args.no_aim_angle else tuple(args.aim_angle_range),
+        aim_angle_step=args.aim_angle_step,
         gp_training_iter=args.gp_iter,
         equiv_e=args.equiv_e,
         k_consecutive=args.k_consecutive,

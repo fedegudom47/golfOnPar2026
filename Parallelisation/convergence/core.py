@@ -507,6 +507,8 @@ def simulate_approach_shots(
     strategy_points: Optional[list] = None,
     aim_range: tuple[float, float] = (-40.0, 40.0),
     aim_step: float = 5.0,
+    aim_angle_range: Optional[tuple[float, float]] = None,
+    aim_angle_step: Optional[float] = None,
     return_all_candidates: bool = False,
 ) -> tuple[list[dict], StrokesAccumulator] | tuple[list[dict], StrokesAccumulator, list[dict]]:
     """Simulate `n_new` additional shots per (grid-point, club, aim) combo.
@@ -517,13 +519,29 @@ def simulate_approach_shots(
     reused, so the total sample size grows by `n_new` each iteration rather
     than being restarted from scratch.
 
+    Aim grid — two mutually exclusive modes:
+    * Fixed-yard (default, `aim_range`/`aim_step`): every grid point tests
+      the same set of yard offsets. The implied ANGULAR resolution shrinks
+      with distance from the pin (a fixed 5yd step is ~7 deg at 40yd but
+      only ~1 deg at 290yd) — see MyScripts/convergence_stabilisation.qmd,
+      "Testing a new hypothesis", for the diagnosis.
+    * Fixed-angle (opt-in, `aim_angle_range`/`aim_angle_step`, in degrees):
+      every grid point tests the same set of ANGLES instead, with the yard
+      offset derived per point (`total_distance * tan(angle)`). This keeps
+      angular resolution — and therefore how distinguishable adjacent aim
+      choices are — constant across the whole strategy grid. Pass either
+      (not both); `aim_angle_range` takes precedence if both are given.
+
     Returns
     -------
     optimal_results : list[dict]
         One entry per grid point with keys:
-        {start, club, aim_offset, mean, var, n_total}
-        `mean` includes the lie-penalty stroke (+1 fairway/rough, +2 water).
-        `n_total` is the accumulated shot count for the winning (club, aim).
+        {start, club, aim_offset, aim_angle_deg, mean, var, n_total}
+        `aim_offset` is always in yards (derived per point in fixed-angle
+        mode); `aim_angle_deg` is always in degrees (derived per point in
+        fixed-yard mode). `mean` includes the lie-penalty stroke (+1
+        fairway/rough, +2 water). `n_total` is the accumulated shot count
+        for the winning (club, aim).
     new_accumulator : StrokesAccumulator
         Updated dict to pass into the next call.
     all_candidates : list[dict], only if return_all_candidates=True
@@ -538,7 +556,13 @@ def simulate_approach_shots(
         accumulator = {}
 
     target = hole.hole
-    aim_points = list(np.arange(aim_range[0], aim_range[1] + aim_step, aim_step))
+
+    use_fixed_angle = aim_angle_range is not None
+    if use_fixed_angle:
+        step = aim_angle_step if aim_angle_step is not None else 5.0
+        aim_values = list(np.arange(aim_angle_range[0], aim_angle_range[1] + step, step))
+    else:
+        aim_values = list(np.arange(aim_range[0], aim_range[1] + aim_step, aim_step))
 
     clubs_avg_carry = {
         club: stats["mean"][1]
@@ -597,9 +621,17 @@ def simulate_approach_shots(
                 mu = hole.club_distributions[club]["mean"]
                 cov = hole.club_distributions[club]["cov"]
 
-            for aim_offset in aim_points:
-                key = (starting_point[0], starting_point[1], club, aim_offset)
-                angle_deg = float(np.degrees(np.arctan(aim_offset / total_distance))) if total_distance > 0 else 0.0
+            for aim_value in aim_values:
+                if use_fixed_angle:
+                    angle_deg = aim_value
+                    aim_offset = total_distance * np.tan(np.radians(angle_deg)) if total_distance > 0 else 0.0
+                else:
+                    aim_offset = aim_value
+                    angle_deg = float(np.degrees(np.arctan(aim_offset / total_distance))) if total_distance > 0 else 0.0
+                # Key on whichever value is actually fixed across grid points
+                # this call, so accumulator lookups stay stable across N-steps.
+                key = (starting_point[0], starting_point[1], club,
+                       angle_deg if use_fixed_angle else aim_offset)
 
                 # --- Simulate only the NEW shots ---
                 new_samples = np.random.multivariate_normal(mu, cov, size=n_new)
@@ -631,6 +663,7 @@ def simulate_approach_shots(
                     "start":      starting_point,
                     "club":       club,
                     "aim_offset": float(aim_offset),
+                    "aim_angle_deg": float(angle_deg),
                     "mean":       mean_val,
                     "var":        var_val,
                     "n_total":    int(len(combined)),
@@ -760,7 +793,10 @@ def results_to_dataframe(
     Columns:
         x, y          – grid-point coordinates (yards)
         club          – optimal club name
-        aim_offset    – optimal aim offset (yards, +right / -left)
+        aim_offset    – optimal aim offset (yards, +right / -left; derived
+                        per-point if the fixed-angle aim grid was used)
+        aim_angle_deg – optimal aim angle (degrees; derived per-point if the
+                        fixed-yard aim grid was used)
         esho_mean     – expected strokes to hole out (includes lie penalty)
         esho_var      – variance of the shot-stroke distribution
         n_total       – accumulated shot count for the winning (club, aim)
@@ -774,6 +810,7 @@ def results_to_dataframe(
             "y":          float(r["start"][1]),
             "club":       r["club"],
             "aim_offset": float(r["aim_offset"]),
+            "aim_angle_deg": float(r.get("aim_angle_deg", float("nan"))),
             "esho_mean":  float(r["mean"]),
             "esho_var":   float(r["var"]),
             "n_total":    int(r.get("n_total", N)),
