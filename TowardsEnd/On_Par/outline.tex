@@ -1,0 +1,412 @@
+\documentclass[11pt, letterpaper]{article}
+
+% --- TYPOGRAPHY & LAYOUT ---
+\usepackage[margin=1in]{geometry} 
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext, newtxmath} % Superior Times Roman clone (used in scientific journals)
+\usepackage[protrusion=true, expansion=true, kerning=true]{microtype} % The "secret sauce" for professional spacing
+\usepackage{setspace}
+\singlespacing
+
+% --- SECTION STYLING ---
+\usepackage{titlesec}
+% Style sections: Large, Bold, Small Caps, with tight spacing
+\titleformat{\section}
+  {\large\bfseries\scshape} 
+  {\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.5em}{0.5em}
+
+\titleformat{\subsection}
+  {\bfseries}
+  {\thesubsection}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{1em}{0.3em}
+
+% --- GRAPHICS, TABLES & CODE ---
+\usepackage{graphicx}
+\usepackage{booktabs} % Professional tables
+\usepackage{array}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{float}
+\usepackage{caption}
+% Caption style: Small font, bold label, slightly separated from figure
+\captionsetup{font={small, stretch=1}, labelfont=bf, labelsep=period}
+
+% --- HYPERLINKS ---
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black, % Keep internal links black for cleanliness
+    citecolor=midnightblue, % Subtle color for citations
+    urlcolor=midnightblue,
+    pdfborder={0 0 0}
+}
+\definecolor{midnightblue}{RGB}{25, 25, 112}
+
+% --- BIBLIOGRAPHY ---
+\usepackage[style=apa, backend=biber]{biblatex}
+\addbibresource{references.bib}
+
+% --- HEADER/FOOTER ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} 
+\renewcommand{\headrulewidth}{0pt} % Remove header line
+\cfoot{\thepage} % Center page number at bottom
+
+% ==========================================
+% DOCUMENT START
+% ==========================================
+\begin{document}
+
+% -------------------------------------------------------
+% BLINDED TITLE PAGE
+% -------------------------------------------------------
+\begin{titlepage}
+    \centering
+    \vspace*{2.5cm}
+    
+    % Elegant Horizontal Rule
+    \rule{\textwidth}{1.5pt}\vspace{0.5cm}
+    
+    {\huge \bfseries \scshape On Par Golf} \\
+    \vspace{0.3cm}
+    {\Large \itshape Leveraging Gaussian Process Regression for Perfect Golf} % Optional Subtitle
+    
+    \vspace{0.5cm}
+    \rule{\textwidth}{1.5pt}
+    
+    \vspace{3cm}
+    
+    \section*{Abstract}
+    \begin{quote}
+    \centering
+    \itshape % Italics for abstract creates a distinct "voice"
+    \noindent
+    150 word abstract\\
+    \begin{itemize}
+        \item Proof-of-concept of a framework to compute player \& golf course specific optimised golf strategies.
+        \item Golf can be modelled as a sequential decision making problem: our decisions and previous outcomes condition our options/likelihood of success in the future.
+        \item We define different optimisation scenarios and leverage GPR under different loss functions that encode different definitions of what is optimal to develop a simulation based approach which allows us to evaluate how different decisions influence expected scoring outcomes.
+        \item Although preliminary in scope -> project establishes a modular and scalable pipeline for a future decision support tool in golf offering personalised, data-driven recommendations grounded in each golfer's unique profile and tendencies.
+    \end{itemize}
+    \end{quote}
+    \textbf{Need to answer:}
+    \begin{itemize}
+        \item Research Question?
+        \item Background/significance
+        \item Methods used to obtain \& Analyse Data
+        \item Results
+        \item Discussion, limitations, reasonableness of assumptions made \& possibilities of future work
+        \end{itemize}
+
+    
+    \vfill
+    \today
+\end{titlepage}
+
+% -------------------------------------------------------
+% MAIN BODY
+% -------------------------------------------------------
+\newpage
+\setcounter{page}{1} % Reset count so Introduction is Page 1
+
+\section{Introduction and Research Question / Background \& significance}
+
+\textbf{\emph{Hook: Complexity of Game}}
+
+Golf is deceptively simple. Get the ball into the hole in the least number of shots. 
+
+Upon closer look, not simple:
+    \begin{itemize}
+        \item 18 holes of differing lengths, and designs. Riddled with: rough, water \& sand traps, out of bounds delimitations. 
+        \item 14 clubs \& countless shot types -> Paradox of choice
+        \item Biomechanical difficulty of hitting a ball smaller smaller than 2 inches in diameter, with a club going upto 135 mph into a cup barely larger than 4 inches wide. 
+        \item In summary, golf is a game of variables -> biomechanical, environmental \& psychological.
+    \end{itemize}
+
+\textbf{\emph{Status quo: Obsession with Mechanics}}
+
+Obsession with technical details and mechanics across golf population as evidenced by the proliferation of AI-driven applications and research
+\begin{itemize}
+    \item Research - papers to cite \textcolor{blue}{cite} \textcolor{red}{add}
+    \item Number of AI apps released focussed on using ML to improve golf technique \textcolor{blue}{cite}
+    \begin{itemize}
+        \item Sportsbox.AI - Analyses swing in both 2D and 3D, providing detailed insights.
+        \item Sparrow Golf
+        \item GolfFix - Utilises AI vision to detect flaws swing, offering immediate analysis and a plan for improvement.
+        \item V1 Golf - \textcolor{red}{don't think it uses AI, maybe remove}
+        \item  SwingSlapp: Features tools for drawing lines and comparing your swing to professionals to help you focus on specific areas for improvement.
+        \item Swing Profile: Transforms smartphone into a swing analysis tool capturing swing and providing instant feedback on mechanics.
+    \end{itemize}
+\end{itemize}
+Acknowledge that obsession with mechanics is not ill-informed. Every Shot Must Have a Purpose \textcolor{blue}{cite}:
+    \begin{itemize}
+        \item Statistical evidence that driving distance is a key factor and a significant predictor of success on the PGA Tour, often more important than driving accuracy or putting. PGA Tour professionals who drive the ball 20 yards further than their peers typically save about 0.75 strokes per round, which translates to a significant three shots over a four-day tournament. The only way to hit the ball far is to maximise ``smash factor", which means optimising technique.
+    \end{itemize}
+
+\textbf{\emph{Pivot}}
+
+ Mechanical questions are valid, but they give rise to critical counter-questions:
+\begin{itemize}
+    \item How do we optimise the tools we already have? In other words, how do we score better without ``getting better"? 
+\end{itemize}
+Asking these questions are valuable:
+\begin{itemize}
+    \item For the amateur. Getting better often involves time, patience \& financial investment. Often, we don't have either.
+    \item Touring pro. Can make all the difference. Most touring professionals are insanely talented, and often they are mechanically equivalent to each other. The only thing that can explain divergence in performance is often strategy. There are countless cases of phenomenal ballstrikes who can't break even, whereas others make more in a year than in others entire carreers combined.
+\end{itemize}
+
+\textbf{\emph{Proposal}}
+\begin{itemize}
+    \item Acknowledge that, as an individual sport, golf offers a perfect playground to integrate player-specific tendencies and situational risk into strategy. 
+    \item We detach ourselves from empirical estimates and generalisations and leverage both course specific and player specific data.
+    \item Explore decision making through a Bayesian paradigm. We define different loss functions in order to describe different optimising mechanisms/ideals and leverage Gaussian Process Regression to create a optimal decision making framework. 
+\end{itemize}
+
+Outline different sections 2. Background and Significance, 3. Data \& Methods, 4. Results, 5. Discussion \& Future expansions
+
+
+\section{Background and Significance}
+
+\textbf{\emph{Broad Context: SABRmetrics}}
+
+The shift toward objective strategy in sports is not new. 
+This project is inspired by SABRmetrics - the empirical analysis of baseball, using statistics to evaluate player performance and make objective, data-driven decisions. Coined by Bill James, this non-traditional statistical investigation allowed the Oakland Athletics to be competitive with teams with much larger budgets by using data to find and acquire undervalued players. \textcolor{blue}{cite}. We apply this same philosophy to golf: valuing the statistical probability of a shot over the traditional ``eye test."
+
+\textbf{\emph{Golf Context: SG \& Decade}}
+
+\begin{itemize}
+    \item This research comes in the wake of SG \textcolor{blue}{cite} \footnote{define SG} which has given players access to interpretable metrics that can help identify relative strengths and weaknesses in players' games. SG established baselines for expected number of shots to hole out from any distance on the golf course.  
+    \item This interpretable metric paved the way to the development of a few of the available course strategy systems. Such as DECADE \textcolor{blue}{can I cite when this is proprietary and no academic literature is posted? This is used by thousands of people, and talked about often.} – proprietary course-management system largely built on generalised estimates which allows players to make informed decisions grounded in statistical insight. The efficacy of golf-course strategy systems was highlighted by the rapid ascent of Will Zalatoris who at age 17 moved from 3000+ WAGR\footnote{define WAGR} ranking to the top 3 in under three months, simply by adopting Scott Fawcett's pedagogy.
+\end{itemize}
+
+\textbf{\emph{Existing Academic Literature}}
+
+Academic literature has attempted to formalize this. This is the grand sum of papers that consider strategy (after scavenging the internet).
+
+\begin{itemize}
+    \item Stauffer and Guillot: Golf strategy optimization and the “Drive for show, putt for dough” adage \textcolor{blue}{cite}
+    
+     Stochastic shortest path framework using Markov Decision Processes using empirical shot distributions \& simulating full hole trajectories. Underlying assumption - professional players always aim directly at the pin when approaching green. Neglects nuance in player decision making: risk aversion, aimpoint adjustments and mor granular personal dispersion patterns.
+     
+     ASTA SUMMARY: paper uses a Markov Decision Process to optimize golf strategy, creating a ``strategic booklet" for golfers. It also challenges the ``Drive for show, putt for dough" adage, finding that driving yields greater scoring benefits than putting.
+    
+    \item Broadie and Ko: A simulation model to analyze the impact of distance and direction on golf scores \textcolor{blue}{cite}
+
+    ASTA SUMMARY: The paper uses a simulation model calibrated with extensive data to analyze the impact of tee shot distance and accuracy on golf scores, finding that directional accuracy is more important than distance for long tee shots. Other papers use similar simulation and skill models.
+
+    \item Khazaeli and Javadpour: Golf Club Selection with AI-Based Game Planning \textcolor{blue}{cite}
+
+    ASTA SUMMARY: This paper uses AI to optimize golf club selection by considering factors like distance, terrain, and wind. It employs a rule-based model and a probabilistic classification model to predict shot outcomes. While it includes general observations about golf, the primary focus is on AI-driven strategy optimization.
+
+    \item Sugawara and Suzuki: Skill-based simulation model for optimizing strategy in golf \textcolor{blue}{cite}
+
+    ASTA Summary: Uses Q-learning to optimize golf strategy by simulating ball drop positions based on skill parameters. The optimization results suggest that golfers with lower accuracy should use shorter-distance clubs.
+
+\end{itemize}
+
+This project addresses all of these gaps.
+\begin{itemize}
+    \item As an individual sport, golf offers an ideal environment to integrate player-specific tendencies into strategy.
+    \item Move beyond generalized estimates of DECADE or the rigid assumptions of Stauffer and Guillot.
+    \item Implement different objective functions/loss functions/definitions of success
+    \item Leverage and use GPR - never been thought of before. Taking us to a Bayesian paradigm where we can compute confidence intervals (have not done this yet... should try to see how I can do this in the little time left).
+    
+\end{itemize}
+
+\section{Methods}
+\subsection{Data}
+In an ideal setting we would have been able to acquire data of two kinds:
+\begin{itemize}
+    \item A comprehensive sample of player-specific shot outcomes recorded for every club a player owns across various lie\footnote{define lie} conditions.
+    \item A granular tournament dataset, such as that recorded by the PGA Tour's ShotLink system, containing $(x,y)$ start coordinates for short-game shots and the strokes required to hole out given specific pin positions.
+\end{itemize}
+Unfortunately, unavailable. We proceed to construct a synthetic data set designed to reflect realistic 2D scoring distributions using:
+\begin{itemize}
+    \item Digitisation
+    \item Interpolation of SG/averages recorded by MB (2003-2012 Shotlink data) \textcolor{blue}{cite}
+    \item Montecarlo simulation
+    \item Discrete inverse transformation
+\end{itemize}
+
+Outlined in the next subsections.
+
+\subsubsection{Simulating Course-Specific Data}
+\emph{Digitisation \& Course Geometry Scraping}
+\begin{enumerate}
+    \item Scrape out layout of a specific golf course using \texttt{OpenStreetMap} \textcolor{blue}{cite}
+    \item Import the data into \texttt{QGIS} for vector editing. Including refining geometries \& exporting file into WKT representations, compatible with Python and libraries we then used (\texttt{Shapely} library \textcolor{blue}{cite}). More specifically, with this representation, we can identify starting lie types within a course's map which is important in both the evaluation and building of our model.
+\end{enumerate}
+
+\textcolor{red}{Images of holes}
+
+    All modelling done on digitisation Mountain Meadows Golf Course in California due to availability and prior knowledge of the venue. Though the entire course was scraped, all simulations were done on hole 9, which is a par\footnote{define par meaning} 3 and a fake extension of this hole into a par 4. Hole 9 provides a rich interaction of different types of obstacles (bunkers, rough, and water hazard) and a challenging hole length (approximately 190 yards), allowing us to illustrate the distinct features of our model (a longer hole provides more strategical options. 
+
+    Chose to simulate on an extension of this hole instead of modelling on an existing par 4 in order to leverage the already simulated data (not trivial) \& gave us liberty to test outputs with different course features.
+    
+\medskip
+\emph{Stage 1 of Data Generation: Generating Observations of Number of Putts on the Green}
+\medskip
+
+\textbf{Goal:} Generate observations over the entire 2-dimensional surface of the green. If we went out in a tournament, for a given position, from every place $(x,y)$ a putt was hit from, we would be able to count how many putts it took to hole out.
+
+\textbf{Challenge:} Most estimates are univariate, we have generalised estimates for the number of putts it takes to hole out from 1ft, 10ft, 60ft. But not all 10ft putts are made equal, and we want a realistic 2-dimensional dataset with discrete values (actual number of putts) associated. What determines the difficulty of a putt is:
+\begin{enumerate}
+    \item Distance from the Cup. How far the ball must travel.
+    \item Fall Line Slope / Gradient (Uphill vs Downhill vs Flat). Describes the steepest uphill-downhill in parallel to direct line drawn between the ball and the cup. Typically downhill putts are harder than uphill putts as the ball picks up speed and is more impacted by the side slope.
+    \item Cross-slope / Side Slope. Sidewats tilt of the green that causes a ball to break left or right.
+    \item Green Speed (Stimp Rating). How fast the green is, typically measured using a Stimpmeter. 
+\end{enumerate}
+
+We already have general estimates of average strokes to hole out from different distances \textcolor{blue}{cite} from Broadie data. \textcolor{red}{maybe include table}. Usually stimp is uniform across the entire green, so doesn't change depending on location of the green. Slope remains the most elusive and variable which we have no data on.
+
+We proceed to generate a pipeline that creates fake artificial date for the green in question. That is, a spread of data points with location encoded in $(x,y)$ coordinates, and number of strokes to hole out, numeric and discrete number of shots.
+
+\begin{enumerate}
+    \item A function was defined to generate $z(x,y)$ representing the local elevation at each point on the surface of the green. This height function was designed to include realistic features present in many tricky greens: general tilt, undulating bumps, and a mid-green tier. This reflects the variability of greens which often include multiple breaks and slopes, significantly influencing the difficulty of any given putt.
+    \item Separately, we interpolate the expected strokes to hole out from the estimates \textcolor{red}{in the table above} to create a univariate function of distance to the hole, $f_g$. Note that the empirical estimates used to derive this function most likely exhibit both heteroscedasticity and increasing data sparsity (with fewer longer putts observed over multiple seasons). 2-foot putts are consistently recorded at every venue with low variance, while 70-footers tend to be more rare and have more variable results given that they are more impacted by the variability introduced by slope and varying course conditions. As such, we wanted our data sampling mechanism to accurately represent this truth.
+    \item To replicate this underlying truth, we once again generate fake data with embedded normally distributed noise, and sampling variability. That is, we generated data at different discrete feet observations, centred $f_d(feet)$, with increasing distance-dependent standard deviation, reducing sample counts at longer ranges. 
+    \item We then fit GPR to this data. This allows su to extra posterior predictive distributions of ESHO\footnote{define ESHO} at any distance. Once trained, this model can generate posterior ``slices" at any distance, giving us a distribution of ESHO for a given distance.
+    \item In order to generate data, we then generated random $(x,y)$ coordinates within the bounds of the green we modelled on. We then compute the following three things:
+    \begin{enumerate}
+        \item The euclidean distance from the ball to the cup.
+        \item The Fall Line Slope / Gradient. Computing the slope in the direction of the line the putt would be played on, to both classify the putt (uphill, downhill, flat) and the magnitude of this effect.
+        \item Tier difference. Classifying whether the ball and the hole were on the same tier, or in different ones.
+        \item Cross slope/Side Slope. Drawing a line toward the hole and computing the perpendicular slope at 50\% and 70\% of the way along said line. 
+    \end{enumerate}
+
+    Given these we compute a difficulty multiplier, see image in Appendix \textcolor{red}{add table in appendix}. This multiplier helps us shift our ``slice"/sampling distribution. From there we can simulate stroke by sampling from the shifted posterior mean rounding to the closest integer value from our sample.
+
+\end{enumerate}
+
+
+
+\emph{Stage 2: Observations and ESHO Elsewhere}
+
+\textbf{Around Green}
+\begin{itemize}
+    \item Slope not as important. 
+    \item Too many ways to hit shots - impossible to quantify, usually player hits it as close as possible to the hole using whatever type of shot they deem they are better at. Not as informative as putting. Therefore a lot simpler.
+\end{itemize}
+
+Interpolation function $f_{AG}(x,y)$ \textcolor{red}{maybe not most appropriate name} which interpolates short game strokes gained from Broadie's empirical estimates given the starting lie.
+
+\textcolor{green}{idea}
+\begin{equation}
+f_{AG}(x,y) = \begin{cases}
+   f_{AG}^B(x,y) & \text{if }(x,y) \text{ is in bunker polygon} \\
+   f_{AG}^R(x,y) & \text{if }(x,y) \text{ is in rough polygon} \\
+    f_{AG}^F(x,y) & \text{if }(x,y) \text{ is in fairway polygon} \\
+\end{cases}
+\end{equation}
+
+In an ideal world, we simply have outcomes from different locations from historical data.
+
+\subsubsection{Simulating Player-Specific Data}
+Simulated data, though this could literally be scraped from a Trackman session for an individual player.
+\begin{enumerate}
+    \item Averages of stock yardages from LPGA Tour Players scraped from Trackman \textcolor{blue}{cite}
+    \item Defined bivariate distributions on an angle - spread estimated from my own trackman observations. The assumptions are that your are recording aiming down the line.
+    \item Since players usually don't only rely on full shots (they have half shots, 3/4 especially for shots under 90 yard), we simulated approach shots under 90 yards where big distance gaps were found based on known shot and decay patterns. Half shot may go half the distance - scale variance appropriately.
+    \item Lie variability matters, shots from rough, deep rough, or sand, as in case of intermediate shots not available even as estimates. To approximate player behaviour from rough we took corresponding fairway dispersion patterns and inflated variance while modestly reducing average carry distance (which is what we would expect with differing severities from these lies).
+\end{enumerate}
+
+In ideal set up player:
+\begin{itemize}
+    \item Record all repeatable shot types as they might call upon during play - fades, draws, partial swings, speciality trajectories. 
+    \item As long as shots are executed consistently and recorded while aiming down $x = 0$ we can integrate them and build our monte carlo method to sample data from the underlying distributions later.
+    \item In summary, irl, we need:
+    \begin{enumerate}
+        \item Intended target line
+        \item Starting Lie
+        \item Club/Shot Label
+        \item Actual ending location $(x,y)$
+    \end{enumerate}
+\end{itemize}
+
+\textbf{Assumptions}
+\begin{itemize}
+    \item Carry modelling. Assume ball stops where it lands. Not true - this can vary substantially with course conditions and are hard to model without detailed surface data.
+    \item No obstacle modelling and shot trajectory modelling. Trees and other obstructions not included. Ignore vertical clearance and apex height. Could be evaluated in future.
+    \item No curvature modelling. We focus on where the ball ends up relative to the target line taken. We don't care how it got there.
+    \item Wind \& Altitude modelling ignored.
+\end{itemize}
+
+\subsection{Modelling and Methods}
+
+\subsubsection{Introduction to GPR}
+GPR Stuff
+
+\subsubsection{Modelling One Perfect Shot. Par 3.}
+\begin{enumerate}
+    \item Fit GPR to raw observations on green. This gives us a distribution of functions that could explain this data. In any case, going forward, in two dimensions, we only consider posterior mean. Basically GPR is our means to get a function we can evaluate at different $(x,y)$ to get ESHO on the green. For non green surfaces we use functions described above. 
+    \item From starting point, montecarlo method samples shot outcomes with different clubs aimed directly at the pin. We evaluate these all of these outcomes ESHO using either GPR or interpolation function by: 
+
+     Identifying lie the outcome rests on:
+        \begin{enumerate}
+            \item If green use GPR fcn to evaluate.
+            \item If around green, compute euclidean distance from the ball to hole and interpolate ES from broadie's published values.
+            \begin{itemize}
+                 \item If ball lands in hazard, we draw straight line from the ball back to the tee and determine the closest intersection with the water's boundary no closer to the hole. We assume player takes a drop as close as possible to this point and plays from there. As such, we add a penalty stroke, reclassify the lie, and evaluate using the same logic as outlined above, from this new location.
+            \end{itemize}
+        \end{enumerate}
+    \item For given aimpoint, (in this case $x= 0$) we compute the average to compute the overall ESHO for given club aimpoint
+    \item Do this for all $\pm 20^\circ$ aimpoints by applying a rotation matrix to shift eh shot distribution accordingly.
+    \item For each club/aimpoint combination, we identify the overall optimal club and aimpoint that minimises ESHO and the optimal aimpoint for each individual club, to support player preferences or constraints.
+\end{enumerate}
+\textcolor{red}{math eqts}
+
+\subsubsection{Modelling Chained Shots \& Decisions. Par 4.}
+Little intro overview
+
+\emph{Step 1: Precomputing Optimal Approaches, Shots to the Green}
+
+\emph{Step 2: Fitting GPR to Optimal Approaches}
+
+\emph{Step 3: Evaluating Tee Shot options}
+
+\subsection{Changing Loss Functions: from Minimising Expectation to Maximising Birdie Probability}
+Little intro why do we care
+
+
+
+\emph{Step 1: Fitting GPR to Modified Green Data}
+
+Label 1 if putt holed, 0 otherwise. Fit GPR to this.
+
+\emph{Step: Modelling, same but opposite}
+
+Instead of minimising ESHO, maximise birdie odds surface
+
+\section{Results}
+
+It works!
+
+
+\section{Discussion}
+Future extensions
+
+\begin{itemize}
+    \item \textbf{Interpretation:} What do the results mean?
+    \item \textbf{Limitations:} Be honest about biases or sample size issues.
+    \item \textbf{Future Work:} What should be done next?
+\end{itemize}
+
+% -------------------------------------------------------
+% END MATTER
+% -------------------------------------------------------
+\newpage 
+\printbibliography[title={References}]
+
+\vspace{2cm}
+
+\section*{Generative AI Statement}
+\noindent
+Brief statement describing how (if at all) generative AI tools were used in your work and the preparation of your submission.
+
+\end{document}
+
+
+
+

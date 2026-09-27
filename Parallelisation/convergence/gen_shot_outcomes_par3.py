@@ -4,7 +4,7 @@ not core.py's shifted/extended Par-4 pipeline. Reuses core.py's already-
 trained Broadie interpolators and putt GPR (distance/rotation invariant, or
 frame-shift-compensated for the green) rather than retraining anything.
 
-Settings: Hybrid, aim +10y / -10y, N=300, mean ESHO printed per panel.
+Settings: Hybrid, aim +10y / -10y, N=1000, mean ESHO printed per panel.
 Both panels stacked, sharing one (reversed) colour scale, rotated 90 deg
 clockwise. Tee marked with a black square (no red-on-green). Yards only,
 no degree annotation.
@@ -26,7 +26,7 @@ import core
 
 CLUB = "Hybrid"
 AIMS = [10.0, -10.0]
-N = 300
+N = 1000
 Y_SHIFT = 160.0  # core.py's putt GPR was trained on hole_9 coords shifted +160y
 np.random.seed(0)
 
@@ -173,14 +173,14 @@ for ax, (aim, landings, esho) in zip(axes, results):
 
     mean_esho = float(np.nanmean(esho))
     ax.set_title(f"{CLUB} | Aim {aim:+.0f} yd | Mean ESHO: {mean_esho:.2f}")
-    ax.set_ylabel("$x_2$ (yards)")
+    ax.set_ylabel("$x_1$ (yards)")
     ax.set_aspect("equal")
     ax.grid(True, linestyle=":")
     ax.legend(loc="upper right", fontsize=8)
 
-axes[-1].set_xlabel("$x_1$ (yards)")
+axes[-1].set_xlabel("$x_2$ (yards)")
 fig.colorbar(sc, ax=axes, label="Expected Strokes to Hole Out", fraction=0.045, pad=0.02)
 
-out = "../../untitled folder/On_Par/images/shot_outcomes_stacked.png"
+out = "../../TowardsEnd/On_Par/images/shot_outcomes_stacked.png"
 plt.savefig(out, dpi=150, bbox_inches="tight")
 print("saved", out)

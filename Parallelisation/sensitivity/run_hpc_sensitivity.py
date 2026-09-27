@@ -412,12 +412,23 @@ def _parse_args() -> argparse.Namespace:
     )
     p.add_argument("--task-id",     type=int, default=None)
     p.add_argument("--configs-csv", type=Path, default=_HERE / "param_configs.csv")
-    p.add_argument("--n-shots",     type=int, default=280,
+    p.add_argument("--n-shots",     type=int, default=1000,
                    help="Approach shots per (grid-point, club, aim).")
     p.add_argument("--gp-iter",     type=int, default=100)
     p.add_argument("--aim-range",   type=float, nargs=2, default=[-20.0, 20.0],
-                   metavar=("MIN", "MAX"))
+                   metavar=("MIN", "MAX"),
+                   help="Fixed-yard aim grid for the tee-shot stage (unused for the "
+                        "approach grid while --aim-angle-range is active there).")
     p.add_argument("--aim-step",    type=float, default=2.0)
+    p.add_argument("--aim-angle-range", type=float, nargs=2, default=[-40.0, 40.0],
+                   metavar=("MIN", "MAX"),
+                   help="Fixed-angle aim grid (degrees) for the 280-point approach "
+                        "grid — see MyScripts/convergenceNEW.qmd, 'Proposed fix'. "
+                        "Pass --no-aim-angle to fall back to the old fixed-yard grid.")
+    p.add_argument("--aim-angle-step", type=float, default=5.0)
+    p.add_argument("--no-aim-angle", action="store_true",
+                   help="Use the old fixed-yard approach grid (--aim-range/--aim-step) "
+                        "instead of the fixed-angle one.")
     p.add_argument("--tee-samples", type=int, default=50)
     p.add_argument("--data-dir",    type=Path, default=None)
     p.add_argument("--output-dir",  type=Path, default=Path("outputs"))
@@ -486,6 +497,8 @@ def main() -> None:
     optimal_results, accumulator = simulate_approach_shots(
         hole=hole, n_new=N, accumulator=None,
         aim_range=tuple(args.aim_range), aim_step=args.aim_step,
+        aim_angle_range=None if args.no_aim_angle else tuple(args.aim_angle_range),
+        aim_angle_step=args.aim_angle_step,
     )
     logger.info("Approach done. %d grid points.", len(optimal_results))
 

@@ -1,0 +1,29 @@
+Set 1.
+High-fidelity
+Low-fidelity
+
+Set 2.
+Putting Data - More distinguishable hole. Maybe make colours consistent with other scales in the paper.
+
+Set 3.
+Dispersion Plots.
+Keep as is but
+1. Create one with visualisation of different dispersion
+2. Make legends larger
+
+Set 4.
+Multi-fidelity.
+1. GPR on L
+2.  GPR on H
+3.  Multifidelity GPR
+
+Set 5.
+Output plots. 
+Dot / heatmaps and numbers plots.
+Arrow plots for general trends - appendix.
+
+Set 6.
+Birdie GPR plot. Birdie data (conversion) + GPR fitted.
+
+Set 7.
+Trends. How does dispersion/distance affect outcome.

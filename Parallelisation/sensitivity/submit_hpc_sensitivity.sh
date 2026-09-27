@@ -15,11 +15,16 @@
 # ---- USER CONFIGURATION -----------------------------------------------------
 REPO_ROOT="/bigdata/rhome/fgdd2022/golfOnPar2026"
 
-N_SHOTS=300            # approach shots per (grid-point, club, aim)
+N_SHOTS=1000           # approach shots per (grid-point, club, aim) — matches the
+                       # convergence study's N≈1000 operating point. run_hpc_sensitivity.py's
+                       # own default aim grid is now fixed +-40deg/5deg (MyScripts/
+                       # convergenceNEW.qmd, "Proposed fix") — nothing to set here for
+                       # that; pass --no-aim-angle above to fall back to the old grid.
 GP_ITER=100            # GPR training iterations (putting + approach GPR)
 TEE_SAMPLES=50         # samples per (club, aim) for tee shot evaluation
 
-TIME_LIMIT="06:00:00"  # wall time per task (sensitivity tasks are lighter than convergence)
+TIME_LIMIT="20:00:00"  # wall time per task, scaled with N_SHOTS 300->1000 (was
+                       # 06:00:00) — kept conservative rather than tight
 MEM_PER_CPU="8G"
 CPUS_PER_TASK=1
 PARTITION="amd"

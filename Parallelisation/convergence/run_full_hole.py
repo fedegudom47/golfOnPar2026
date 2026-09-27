@@ -284,8 +284,8 @@ def _parse_args() -> argparse.Namespace:
                    help="Training iterations for both GPRs.")
     p.add_argument("--tee-n-samples",  type=int,   default=50,
                    help="Monte Carlo samples for tee shot evaluation.")
-    p.add_argument("--tee-aim-range",  type=float, nargs=2, default=[-30.0, 30.0])
-    p.add_argument("--tee-aim-step",   type=float, default=2.0)
+    p.add_argument("--tee-aim-range",  type=float, nargs=2, default=[-40.0, 40.0])
+    p.add_argument("--tee-aim-step",   type=float, default=4.0)
     p.add_argument("--data-dir",       type=Path,
                    default=Path(__file__).parent.parent / "data")
     p.add_argument("--output-dir",     type=Path,  default=Path("outputs/full_hole"))
@@ -319,11 +319,13 @@ def main() -> None:
         optimal_results = _csv_to_results(args.load_csv)
         n_label = args.load_csv.stem.split("_N")[-1] if "_N" in args.load_csv.stem else "loaded"
     else:
-        logger.info("Simulating %d approach shots per strategy ...", args.n_shots)
+        logger.info("Simulating %d approach shots per strategy (fixed +-40deg/5deg aim grid)...", args.n_shots)
         optimal_results, _ = simulate_approach_shots(
             hole=hole,
             n_new=args.n_shots,
             accumulator=None,
+            aim_angle_range=(-40.0, 40.0),
+            aim_angle_step=5.0,
         )
         n_label = str(args.n_shots)
         # Save approach CSV

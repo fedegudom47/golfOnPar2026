@@ -53,13 +53,30 @@ def _equivset_path(output_dir: Path, seed: int, N: int) -> Path:
 
 
 def collect_stabilisation_logs(output_dir: Path, n_seeds: int) -> pd.DataFrame:
-    """Concatenate every seed's seed{SEED}_stabilisation.tsv."""
+    """Concatenate every seed's seed{SEED}_stabilisation.tsv.
+
+    The worker appends to this TSV rather than overwriting it, so if a seed
+    was ever re-run in place (e.g. a stale HPC ``outputs/`` dir reused for a
+    new sweep with different N_MAX / aim grid) the file can contain an old
+    run's rows followed by the new run's. Only the most recent run is real:
+    keep rows from the LAST time N drops back to its minimum (= the sweep's
+    n_start) onward, discarding any earlier, stale block.
+    """
     frames = []
     for seed in range(n_seeds):
         p = output_dir / f"seed{seed:04d}" / f"seed{seed:04d}_stabilisation.tsv"
         if not p.exists():
             continue
         df = pd.read_csv(p, sep="\t")
+        restarts = df.index[df["N"] == df["N"].min()]
+        if len(restarts) > 1:
+            last_start = restarts[-1]
+            logger.warning(
+                "seed%04d: stabilisation.tsv has %d stale rows before a "
+                "re-run restart at N=%d (row %d) — dropping them.",
+                seed, last_start, df.loc[last_start, "N"], last_start,
+            )
+            df = df.iloc[last_start:]
         df["seed"] = seed
         frames.append(df)
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()

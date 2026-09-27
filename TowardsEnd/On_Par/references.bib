@@ -1,0 +1,290 @@
+% --- BACKGROUND & CONTEXT ---
+
+@book{moneyball_lewis,
+  author    = {Lewis, Michael},
+  title     = {Moneyball: The Art of Winning an Unfair Game},
+  year      = {2003},
+  publisher = {W. W. Norton & Company},
+}
+
+@misc{Broadie_2014a, 
+url={https://business.columbia.edu/faculty/research/every-shot-counts-using-revolutionary-strokes-gained-approach-improve-your-golf}, 
+journal={Every shot counts: Using the revolutionary strokes gained approach to improve your golf performance and Strategy }, 
+publisher={Columbia Business School}, 
+author={Broadie, Mark}, 
+year={2014}, 
+month={Mar}} 
+
+@misc{decade_golf,
+  author    = {Fawcett, Scott},
+  title     = {DECADE Golf Course Management System},
+  year      = {2024},
+  url       = {https://decade.golf/}
+}
+
+% --- DATA SOURCES & LIBRARIES ---
+
+@book{openstreetmap,
+  title={OpenStreetMap},
+  author={Bennett, Jonathan},
+  year={2010},
+  publisher={Packt Publishing Ltd}
+}
+
+@article{shapely_library,
+  title={The shapely user manual},
+  author={Gillies, Sean and others},
+  journal={URL https://pypi. org/project/Shapely},
+  year={2013}
+}
+
+@book{broadie_book,
+  author    = {Broadie, Mark},
+  title     = {Every Shot Counts: Using the Revolutionary Strokes Gained Approach to Improve Your Golf Performance and Strategy},
+  year      = {2014},
+  publisher = {Gotham Books}
+}
+
+% --- METHODOLOGY ---
+
+@book{bellman_dynamic,
+  author    = {Bellman, Richard},
+  title     = {Dynamic Programming},
+  year      = {1957},
+  publisher = {Princeton University Press}
+}
+
+@article{scikit_learn,
+  title={Scikit-learn: Machine Learning in Python},
+  author={Pedregosa, F. and Varoquaux, G. and Gramfort, A. and Michel, V. and Thirion, B. and Grisel, O. and Blondel, M. and Prettenhofer, P. and Weiss, R. and Dubourg, V. and Vanderplas, J. and Passos, A. and Cournapeau, D. and Brucher, M. and Perrot, M. and Duchesnay, E.},
+  journal={Journal of Machine Learning Research},
+  volume={12},
+  pages={2825--2830},
+  year={2011}
+}
+
+@misc{stauffer_golf_2025,
+	title = {Golf {Strategy} {Optimization} and the "{Drive} for show, putt for dough" adage},
+	url = {http://arxiv.org/abs/2309.00485},
+	doi = {10.48550/arXiv.2309.00485},
+	abstract = {This study explores strategic decision-making in professional golf’s Stroke Play format through a computational lens. We develop a Markov Decision Process (MDP) model—specifically, a stochastic shortest path formulation—to optimize a golfer’s strategy on any given course, incorporating both course layout and player skill data. While MDPs have been widely used in sports analytics, applying them to golf presents significant scalability challenges due to the curse of dimensionality. Our primary objective is not to predict player performance with high precision, but rather to demonstrate that an exact, data-driven MDP approach is computationally tractable on full scale, real-world instances. We show that, with careful problem structuring, low-level coding, and efficient memory management, it is possible to solve such large-scale models without resorting to heuristics or Q-learning approximations, as used in existing approaches. To illustrate the model’s potential, we show how one can use PGA Tour data and aerial course imagery to simulate strategic outcomes and analyze how different skill profiles influence performance. In particular, we assess the relative impact of driving and putting, challenging the popular adage “Drive for show, putt for dough.” These results support the value of our methodology as a robust proof of concept and a foundation for future enhancements. All code and analyses (in R and C++) are made available as open-source resources to support reproducibility and further research.},
+	language = {en},
+	urldate = {2025-12-08},
+	publisher = {arXiv},
+	author = {Stauffer, Gautier and Guillot, Matthieu},
+	month = aug,
+	year = {2025},
+	note = {arXiv:2309.00485 [math]},
+	keywords = {Mathematics - Optimization and Control},
+	file = {PDF:/Users/federicadomecq/Zotero/storage/9754KSMK/Stauffer and Guillot - 2025 - Golf Strategy Optimization and the Drive for show, putt for dough adage.pdf:application/pdf},
+}
+
+@article{khazaeli_golf_2024,
+	title = {Golf {Club} {Selection} with {AI}-{Based} {Game} {Planning}},
+	volume = {26},
+	issn = {1099-4300},
+	url = {https://www.mdpi.com/1099-4300/26/9/800},
+	doi = {10.3390/e26090800},
+	abstract = {In the dynamic realm of golf, where every swing can make the difference between victory and defeat, the strategic selection of golf clubs has become a crucial factor in determining the outcome of a game. Advancements in artificial intelligence have opened new avenues for enhancing the decision-making process, empowering golfers to achieve optimal performance on the course. In this paper, we introduce an AI-based game planning system that assists players in selecting the best club for a given scenario. The system considers factors such as distance, terrain, wind strength and direction, and quality of lie. A rule-based model provides the four best club options based on the player’s maximum shot data for each club. The player picks a club, shot, and target and a probabilistic classification model identifies whether the shot represents a birdie opportunity, par zone, bogey zone, or worse. The results of our model show that taking into account factors such as terrain and atmospheric features increases the likelihood of a better shot outcome.},
+	language = {en},
+	number = {9},
+	urldate = {2025-12-08},
+	journal = {Entropy},
+	author = {Khazaeli, Mehdi and Javadpour, Leili},
+	month = sep,
+	year = {2024},
+	pages = {800},
+	file = {PDF:/Users/federicadomecq/Zotero/storage/MPM2LWUG/Khazaeli and Javadpour - 2024 - Golf Club Selection with AI-Based Game Planning.pdf:application/pdf},
+}
+
+@inproceedings{sugawara_skill-based_2013,
+	address = {Wollongong, NSW},
+	title = {Skill-based simulation model for optimizing strategy in golf},
+	isbn = {978-1-4673-5320-5 978-1-4673-5319-9},
+	url = {http://ieeexplore.ieee.org/document/6584323/},
+	doi = {10.1109/AIM.2013.6584323},
+	abstract = {Not only skill but also determination of strategy (choosing a club and a target) is important to improve golf scores. This study aims to optimize a strategy to help golfer’s improve their scores. To optimize a strategy, ﬁrst, we develop a simulation model that determines the drop position of a golf ball probabilistically. The size of a gap between a target and a position at which the ball actually falls changes depending on the skill parameters. Next, expected values of the score are calculated at every spot among the golf course by the Qlearning [9] using the simulation model. Finally, we check the capability to acquire a strategy through simulation that directs action to a golfer agent using optimized Q-tables. Results of the optimization show that when the shot distance of each club is the same but the shot accuracy is not, a club that has a shorter shot distance is more suitable for a golfer with low shot accuracy than a golfer with high shot accuracy. The strategy is optimized in consideration of course layout and golfer’s skills.},
+	language = {en},
+	urldate = {2025-12-08},
+	booktitle = {2013 {IEEE}/{ASME} {International} {Conference} on {Advanced} {Intelligent} {Mechatronics}},
+	publisher = {IEEE},
+	author = {Sugawara, Shogo and Kawamura, Hidenori and Suzuki, Keiji},
+	month = jul,
+	year = {2013},
+	pages = {1591--1596},
+	file = {PDF:/Users/federicadomecq/Zotero/storage/EM3WQ5E8/Sugawara et al. - 2013 - Skill-based simulation model for optimizing strategy in golf.pdf:application/pdf},
+}
+
+
+@misc{Jenkins_1998, title={Three perfect shots makes Hogan’s day}, url={https://www.irishtimes.com/sport/three-perfect-shots-makes-hogan-s-day-1.179937}, journal={The Irish Times}, publisher={The Irish times}, author={Jenkins, Dan}, year={1998}, month={Aug}} 
+
+@misc{GPyTorch,
+  author = {Geoff Pleiss, Jacob R. Gardner, Kilian Q. Weinberger, Andrew Gordon Wilson, Max Balandat},
+  title = {GPyTorch Documentation},
+  note = {Available at: \url{https://docs.gpytorch.ai/en/stable/}}
+}
+
+
+@inproceedings{GPR,
+ author = {Williams, Christopher and Rasmussen, Carl},
+ booktitle = {Advances in Neural Information Processing Systems},
+ editor = {D. Touretzky and M.C. Mozer and M. Hasselmo},
+ pages = {},
+ publisher = {MIT Press},
+ title = {Gaussian Processes for Regression},
+ url = {https://proceedings.neurips.cc/paper_files/paper/1995/file/7cce53cf90577442771720a370c3c723-Paper.pdf},
+ volume = {8},
+ year = {1995}
+}
+
+@misc{shapely,
+  author       = {Sean Gillies and others},
+  title        = {Shapely: manipulation and analysis of geometric objects},
+  year         = {2024},
+  howpublished = {\url{https://shapely.readthedocs.io/}},
+  note         = {Version 2.x}
+}
+
+@misc{qgis,
+  author       = {{QGIS Development Team}},
+  title        = {QGIS Geographic Information System},
+  year         = {2024},
+  howpublished = {\url{https://qgis.org/}},
+  note         = {Open Source Geospatial Foundation Project}
+}
+
+@misc{openstreetmap,
+  author       = {{OpenStreetMap contributors}},
+  title        = {OpenStreetMap: Collaborative map data},
+  year         = {2024},
+  howpublished = {\url{https://www.openstreetmap.org}},
+  note         = {Available under the Open Database License (ODbL)}
+}
+
+@misc{rosu_bellman,
+  title={The bellman principle of optimality},
+  author={Rosu, Ioanid},
+  year={2002}
+}
+
+@misc{numpy,
+    title={Array programming with {NumPy}},
+    author={Harris, Charles R and Millman, Kenneth J and van der Walt, St{\'e}fan J and Gommers, Ralf and Virtanen, Pauli and Cournapeau, David and Wieser, Eric and Taylor, Julian and Berg, Sebastian and Smith, Nathaniel J and Kern, Robert and Picus, Matti and Hoyer, Scott and van Kerkwijk, Marten H and Brett, Matthew and Haldane, Arun and del R{\'i}o, Jaime Fern{\'a}ndez and Wiebe, Mark and Peterson, Ilhan and Reddy, Pearu and Kluyver, Thomas and Power, Eric and Venter, Robert and May, Alan and Nelson, Alex and Jones, Eric and Kernal, Robert and other authors},
+    journal={Nature},
+    volume={585},
+    number={7825},
+    pages={357--362},
+    year={2020},
+    doi={10.1038/s41586-020-2649-2},
+    url={https://numpy.org/}
+}
+
+@article{schwartz2015paradox,
+  title={The paradox of choice},
+  author={Schwartz, Barry},
+  journal={Positive psychology in practice: Promoting human flourishing in work, health, education, and everyday life},
+  pages={121--138},
+  year={2015},
+  publisher={Wiley Online Library}
+}
+
+@misc{trackman2024averages,
+  author       = {{Trackman}},
+  title        = {Introducing Updated Tour Averages},
+  howpublished = {\url{https://www.trackman.com/blog/golf/introducing-updated-tour-averages}},
+  year         = {2024},
+  month        = may,
+  note         = {Accessed: 2025-07-10}
+}
+
+@article{albert2010sabermetrics,
+  title={Sabermetrics: The past, the present, and the future},
+  author={Albert, Jim},
+  journal={Mathematics and sports},
+  volume={43},
+  pages={15},
+  year={2010},
+  publisher={Mathematical Association of America}
+}
+
+@misc{gardner2021gpytorch,
+      title={GPyTorch: Blackbox Matrix-Matrix Gaussian Process Inference with GPU Acceleration}, 
+      author={Jacob R. Gardner and Geoff Pleiss and David Bindel and Kilian Q. Weinberger and Andrew Gordon Wilson},
+      year={2021},
+      eprint={1809.11165},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/1809.11165}, 
+}
+
+@misc{sportsbox2026,
+  author       = {{Sportsbox AI}},
+  title        = {Sportsbox AI: 3D Motion Analysis and AI for Golf},
+  year         = {2026},
+  howpublished = {\url{https://www.sportsbox.ai/}},
+  note         = {Accessed: 2026-09-13}
+}
+
+@misc{golffix2026,
+  author       = {{MOAIS, Inc.}},
+  title        = {GolfFix: AI Golf Swing Analysis},
+  year         = {2026},
+  howpublished = {\url{https://www.golffix.io/en/golffix}},
+  note         = {Accessed: 2026-09-13}
+}
+
+@misc{sparrow2026,
+  author       = {{Sparrow}},
+  title        = {Sparrow Golf: Generative AI Coaching for Physical Skills},
+  year         = {2026},
+  howpublished = {\url{https://www.sparrowup.com/}},
+  note         = {Accessed: 2026-09-13}
+}
+
+@misc{shotlink2026,
+  author       = {{PGA TOUR}},
+  title        = {ShotLink},
+  year         = {2026},
+  howpublished = {\url{https://www.shotlink.com/}},
+  note         = {Accessed: 2026-09-13}
+}
+
+@misc{trackman2026,
+  author       = {{TrackMan}},
+  title        = {TrackMan 4},
+  year         = {2026},
+  howpublished = {\url{https://www.trackman.com/golf/launch-monitors/trackman-4}},
+  note         = {Accessed: 2026-09-13}
+}
+
+
+
+@misc{trackmanLPGA2024,
+ author       = {{TrackMan}},
+  title        = {TrackMan Tour Averages},
+  year         = {2024},
+  howpublished = {\url{https://www.trackman.com/blog/introducing-updated-tour-averages}},
+  note         = {Accessed: 2026-09-13}
+}
+
+@article{kennedy2000predicting,
+    author  = {Kennedy, Marc C. and O'Hagan, Anthony},
+    title   = {Predicting the Output from a Complex Computer Code When Fast Approximations Are Available},
+    journal = {Biometrika},
+    year    = {2000},
+    volume  = {87},
+    number  = {1},
+    pages   = {1--13},
+    doi     = {10.1093/biomet/87.1.1}
+}
+
+@article{kennedy2001bayesian,
+    author  = {Kennedy, Marc C. and O'Hagan, Anthony},
+    title   = {Bayesian Calibration of Computer Models},
+    journal = {Journal of the Royal Statistical Society: Series B (Statistical Methodology)},
+    year    = {2001},
+    volume  = {63},
+    number  = {3},
+    pages   = {425--464},
+    doi     = {10.1111/1467-9868.00294}
+}

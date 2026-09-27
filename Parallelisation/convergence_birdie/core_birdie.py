@@ -425,6 +425,8 @@ def simulate_approach_shots_birdie(
     strategy_points: Optional[list] = None,
     aim_range: tuple[float, float] = (-20.0, 20.0),
     aim_step: float = 2.0,
+    aim_angle_range: Optional[tuple[float, float]] = None,
+    aim_angle_step: Optional[float] = None,
 ) -> tuple[list[dict], BirdieAccumulator]:
     """Simulate n_new approach shots per (grid-point, club, aim) and track
     birdie probability via incremental accumulation.
@@ -443,7 +445,12 @@ def simulate_approach_shots_birdie(
         accumulator = {}
 
     target     = hole.hole
-    aim_points = list(np.arange(aim_range[0], aim_range[1] + aim_step, aim_step))
+    use_fixed_angle = aim_angle_range is not None
+    if use_fixed_angle:
+        step = aim_angle_step if aim_angle_step is not None else 5.0
+        aim_values = list(np.arange(aim_angle_range[0], aim_angle_range[1] + step, step))
+    else:
+        aim_values = list(np.arange(aim_range[0], aim_range[1] + aim_step, aim_step))
 
     clubs_avg_carry = {
         club: stats["mean"][1]
@@ -493,12 +500,21 @@ def simulate_approach_shots_birdie(
                 mu  = hole.club_distributions[club]["mean"]
                 cov = hole.club_distributions[club]["cov"]
 
-            for aim_offset in aim_points:
-                key = (starting_point[0], starting_point[1], club, aim_offset)
-                angle_deg = (
-                    float(np.degrees(np.arctan(aim_offset / total_distance)))
-                    if total_distance > 0 else 0.0
-                )
+            for aim_value in aim_values:
+                if use_fixed_angle:
+                    angle_deg = aim_value
+                    aim_offset = (
+                        total_distance * np.tan(np.radians(angle_deg))
+                        if total_distance > 0 else 0.0
+                    )
+                else:
+                    aim_offset = aim_value
+                    angle_deg = (
+                        float(np.degrees(np.arctan(aim_offset / total_distance)))
+                        if total_distance > 0 else 0.0
+                    )
+                key = (starting_point[0], starting_point[1], club,
+                       angle_deg if use_fixed_angle else aim_offset)
 
                 new_samples = np.random.multivariate_normal(mu, cov, size=n_new)
                 new_probs: list[float] = []
@@ -532,6 +548,7 @@ def simulate_approach_shots_birdie(
                         "start":            starting_point,
                         "club":             club,
                         "aim_offset":       float(aim_offset),
+                        "aim_angle_deg":    float(angle_deg),
                         "mean_birdie_prob": mean_val,
                         "var_birdie_prob":  var_val,
                         "n_total":          int(len(combined)),
@@ -559,6 +576,7 @@ def results_to_dataframe(
             "y":               float(r["start"][1]),
             "club":            r["club"],
             "aim_offset":      float(r["aim_offset"]),
+            "aim_angle_deg":   float(r.get("aim_angle_deg", float("nan"))),
             "mean_birdie_prob": float(r["mean_birdie_prob"]),
             "var_birdie_prob":  float(r["var_birdie_prob"]),
             "n_total":         int(r.get("n_total", N)),

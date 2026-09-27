@@ -1,0 +1,466 @@
+\documentclass[11pt, letterpaper]{article}
+
+% --- TYPOGRAPHY & LAYOUT ---
+\usepackage[margin=1in]{geometry} 
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext, newtxmath} % Superior Times Roman clone (used in scientific journals)
+\usepackage[protrusion=true, expansion=true, kerning=true]{microtype} % The "secret sauce" for professional spacing
+\usepackage{setspace}
+\singlespacing
+
+% --- SECTION STYLING ---
+\usepackage{titlesec}
+% Style sections: Large, Bold, Small Caps, with tight spacing
+\titleformat{\section}
+  {\large\bfseries\scshape} 
+  {\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.5em}{0.5em}
+
+\titleformat{\subsection}
+  {\bfseries}
+  {\thesubsection}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{1em}{0.3em}
+
+% --- GRAPHICS, TABLES & CODE ---
+\usepackage{graphicx}
+\usepackage{booktabs} % Professional tables
+\usepackage{array}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{float}
+\usepackage{caption}
+% Caption style: Small font, bold label, slightly separated from figure
+\captionsetup{font={small, stretch=1}, labelfont=bf, labelsep=period}
+
+% --- HYPERLINKS ---
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black, % Keep internal links black for cleanliness
+    citecolor=midnightblue, % Subtle color for citations
+    urlcolor=midnightblue,
+    pdfborder={0 0 0}
+}
+\definecolor{midnightblue}{RGB}{25, 25, 112}
+
+% --- BIBLIOGRAPHY ---
+\usepackage[style=apa, backend=biber]{biblatex}
+\addbibresource{references.bib}
+
+% --- HEADER/FOOTER ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} 
+\renewcommand{\headrulewidth}{0pt} % Remove header line
+\cfoot{\thepage} % Center page number at bottom
+
+% ==========================================
+% DOCUMENT START
+% ==========================================
+\begin{document}
+
+% -------------------------------------------------------
+% BLINDED TITLE PAGE
+% -------------------------------------------------------
+\begin{titlepage}
+    \centering
+    \vspace*{2.5cm}
+    
+    % Elegant Horizontal Rule
+    \rule{\textwidth}{1.5pt}\vspace{0.5cm}
+    
+    {\huge \bfseries \scshape On Par Golf} \\
+    \vspace{0.3cm}
+    {\Large \itshape Leveraging Gaussian Process Regression for Perfect Golf} % Optional Subtitle
+    
+    \vspace{0.5cm}
+    \rule{\textwidth}{1.5pt}
+    
+    \vspace{3cm}
+    
+    \section*{Abstract}
+    \begin{quote}
+    \centering
+    \itshape % Italics for abstract creates a distinct "voice"
+    \noindent
+    150 word abstract\\
+    \begin{itemize}
+        \item Proof-of-concept of a framework to compute player \& golf course specific optimised golf strategies.
+        \item Golf can be modelled as a sequential decision making problem: our decisions and previous outcomes condition our options/likelihood of success in the future.
+        \item We define different optimisation scenarios and leverage GPR under different loss functions that encode different definitions of what is optimal to develop a simulation based approach which allows us to evaluate how different decisions influence expected scoring outcomes.
+        \item Although preliminary in scope -> project establishes a modular and scalable pipeline for a future decision support tool in golf offering personalised, data-driven recommendations grounded in each golfer's unique profile and tendencies.
+    \end{itemize}
+    \end{quote}
+    \textbf{Need to answer:}
+    \begin{itemize}
+        \item Research Question?
+        \item Background/significance
+        \item Methods used to obtain \& Analyse Data
+        \item Results
+        \item Discussion, limitations, reasonableness of assumptions made \& possibilities of future work
+        \end{itemize}
+
+    
+    \vfill
+    \today
+\end{titlepage}
+
+% -------------------------------------------------------
+% MAIN BODY
+% -------------------------------------------------------
+\newpage
+\setcounter{page}{1} % Reset count so Introduction is Page 1
+
+\section{Introduction and Research Question / Background \& significance}
+
+Golf is a deceptively simple sport: get the ball into the hole in the least number of shots possible. Upon closer inspection, however, this objective is marred by complexity. Over the course of a round, a player faces 18 holes made up of differing lengths and topographies, riddled with obstacles: water hazards, sand traps, and out-of-bounds limits with associated penalties. Consequently, no player will ever face the exact same shot twice.
+
+Traditionally, golf performance has been viewed through a biomechanical lens. Striking a ball smaller than 2 inches in diameter with a club head moving at 135 mph toward a distant target is no small feat. This has led to the status quo: an obsession with technical perfection, evidenced by the proliferation of AI-driven swing analysis tools such as Sportsbox.AI, GolfFix, and Sparrow Golf.
+
+Said focus on mechanics is not statistically unfounded. In 2014, Mark Broadie provided statistical evidence that driving distance is a key factor and significant predictor of success on the PGA Tour – often more important than accuracy or putting (which had long been hypothesised to be the most important part of the golf game). PGA Tour professionals who drive their ball 20 yards further than their peers typically save about 0.75 strokes per round, translating to a significant 3 strokes over a four-day tournament. The only way to hit the ball further is to maximise “smash factor”, which implies optimising technique.
+
+
+While mechanical questions are valid, they give rise to critical counter-questions: is there a way to optimise the tools we already have? How can we improve our scores without necessarily “getting better” at swinging a club? 
+
+Ideally, the tour professional's swing is mechanically optimised, yet scoring divergences persist between the top 50 players, consistent winners, and the rest. For the recreational amateur, while technique has a large margin for improvement, meaningful mechanical changes require time, patience, and financial investment. Both groups can benefit from taking a different approach.
+
+Golf is not solely about physical execution; it is a problem of complex sequential decision-making under uncertainty. There are a million sequences of different shots that can get our ball into the bottom of the hole. A player faces the course with upto 14 clubs and the possibility of hitting dozens of shot types. This flexibility, creates a "paradox of choice"; a psychological hurdle where an abundance of options obscures the best path forward. This is where decision theory and statistics become relevant. By treating every shot as a mathematical calculation of risk versus reward, we can mathematically determine the optimal path to the hole.
+
+To this end, this paper proposes a data-driven framework allowing an individual player to quantify their optimal strategy on a given golf course by leveraging both venue- and player-specific data. We 
+approach this decision theory scenario through a Bayesian lens, using prior performance data to help inform future strategic choices. By implementing Gaussian Process Regression (GPR), we construct continuous predictive surfaces that evaluate the "scoring potential" of all possible landing zones on a golf course. This model allows us to mathematically define the player's objective through different "loss functions" - whether minimising the expected number of strokes to hole out for consistent play, or maximising the raw probability of a birdie when the need to exhibit a more aggressive play style arises. Ultimately, this framework replaces guesswork with calculation, identifying the specific club and aimpoint combination that statistically optimises a player's outcome from any location on the course.
+
+The remainder of this paper is organised as follows: Section 2 places this work within the broader context of sports analytics and reviews existing literature. Section 3 describes the data we used and the modeling mechanisms employed. Section 4 presents the results of our simulations, and Section 5 discusses the limitations of the current framework alongside potential avenues for future expansion. \textcolor{red}{remember to change this, added a data section}
+
+\section{Background and Significance}
+
+\textbf{\emph{Broad Context: SABRmetrics}}
+
+The shift toward objective strategy in sports is not new. 
+This project is inspired by SABRmetrics - the empirical analysis of baseball, using statistics to evaluate player performance and make objective, data-driven decisions. Coined by Bill James, this non-traditional statistical investigation allowed the Oakland Athletics to be competitive with teams with much larger budgets by using data to find and acquire undervalued players. \textcolor{blue}{cite}. We apply this same philosophy to golf: valuing the statistical probability of a shot over the traditional ``eye test."
+
+\textbf{\emph{Golf Context: SG \& Decade}}
+
+\begin{itemize}
+    \item This research comes in the wake of SG \textcolor{blue}{cite} \footnote{define SG} which has given players access to interpretable metrics that can help identify relative strengths and weaknesses in players' games. SG established baselines for expected number of shots to hole out from any distance on the golf course.  
+    \item This interpretable metric paved the way to the development of a few of the available course strategy systems. Such as DECADE \textcolor{blue}{can I cite when this is proprietary and no academic literature is posted? This is used by thousands of people, and talked about often.} – proprietary course-management system largely built on generalised estimates which allows players to make informed decisions grounded in statistical insight. The efficacy of golf-course strategy systems was highlighted by the rapid ascent of Will Zalatoris who at age 17 moved from 3000+ WAGR\footnote{define WAGR} ranking to the top 3 in under three months, simply by adopting Scott Fawcett's pedagogy.
+\end{itemize}
+
+\textbf{\emph{Existing Academic Literature}}
+
+Academic literature has attempted to formalize this. This is the grand sum of papers that consider strategy (after scavenging the internet).
+
+\begin{itemize}
+    \item Stauffer and Guillot: Golf strategy optimization and the “Drive for show, putt for dough” adage \textcolor{blue}{cite}
+    
+     Stochastic shortest path framework using Markov Decision Processes using empirical shot distributions \& simulating full hole trajectories. Underlying assumption - professional players always aim directly at the pin when approaching green. Neglects nuance in player decision making: risk aversion, aimpoint adjustments and mor granular personal dispersion patterns.
+     
+     ASTA SUMMARY: paper uses a Markov Decision Process to optimize golf strategy, creating a ``strategic booklet" for golfers. It also challenges the ``Drive for show, putt for dough" adage, finding that driving yields greater scoring benefits than putting.
+    
+    \item Broadie and Ko: A simulation model to analyze the impact of distance and direction on golf scores \textcolor{blue}{cite}
+
+    ASTA SUMMARY: The paper uses a simulation model calibrated with extensive data to analyze the impact of tee shot distance and accuracy on golf scores, finding that directional accuracy is more important than distance for long tee shots. Other papers use similar simulation and skill models.
+
+    \item Khazaeli and Javadpour: Golf Club Selection with AI-Based Game Planning \textcolor{blue}{cite}
+
+    ASTA SUMMARY: This paper uses AI to optimize golf club selection by considering factors like distance, terrain, and wind. It employs a rule-based model and a probabilistic classification model to predict shot outcomes. While it includes general observations about golf, the primary focus is on AI-driven strategy optimization.
+
+    \item Sugawara and Suzuki: Skill-based simulation model for optimizing strategy in golf \textcolor{blue}{cite}
+
+    ASTA Summary: Uses Q-learning to optimize golf strategy by simulating ball drop positions based on skill parameters. The optimization results suggest that golfers with lower accuracy should use shorter-distance clubs.
+
+\end{itemize}
+
+This project addresses all of these gaps.
+\begin{itemize}
+    \item As an individual sport, golf offers an ideal environment to integrate player-specific tendencies into strategy.
+    \item Move beyond generalized estimates of DECADE or the rigid assumptions of Stauffer and Guillot.
+    \item Implement different objective functions/loss functions/definitions of success
+    \item Leverage and use GPR - never been thought of before. Taking us to a Bayesian paradigm where we can compute confidence intervals (have not done this yet... should try to see how I can do this in the little time left).
+    
+\end{itemize}
+
+\section{Data}
+In order to understand the data inputs of this framework, it is valuable to distinguish between the ideal dataset (which would drive a fully deployed version of this tool) and the proxy dataset which we actually used in this proof-of-concept. Our model is agnostic to its data source; it requires three specific layers of information to work: specific outcome samples or distributions, course topography, and player tendencies
+
+\subsection{The Ideal Data}
+In a fully realized application, such as one using the PGA Tour's ShotLink system and a user's shot history, our model would consume the following:
+\begin{enumerate}
+    \item \textbf{Location-Specific Outcome Data:} This is the heart of our model and course-specific "scoring surface". We would ideally utilise a massive repository of historical shots recorded from all locations on a golf hole with a given pin location. For any recorded shot on a given starting coordinate, $(x_s,y_s)$, for a given hole, we would observe the discrete outcome of how many shots it took various players to hole out. This would encode the underlying "difficulty" of a specific spot: locations with the same Euclidean distance to the pin where the average strokes to hole out are higher than others are inherently "harder". \textcolor{blue}{insert drawing}
+    \item \textbf{Course Geometry and Lie Classification:} A high resolution, bird's-eye view vector map of the hole (where the tee is at $(0,0)$). This allows our model to instantly classify any coordinate $(x,y)$ as a specific lie type (i.e. Fairway, Rough, Deep Rough or Bunker), triggering the appropriate modelling and decision logic.
+    \item \textbf{Comprehensive Player Tendencies:} A library of "stock shots" labeled by the player. Whether recorded on a launch monitor (e.g., Trackman, GCQuad) or manually logged, would consist of landing coordinates $(x_l,y_l)$ relative to $(x_s,y_s)$ for every repeatable shot in a player's repertoire – ranging from standard full swings to speciality labelled shots such as "knock-down" shots, fades, or punches (for which differing players may use distinct names). Ideally, we would have labelled data from different starting lies such as the rough or fairway bunkers, in order to account for the variances of hitting from different surfaces.
+\end{enumerate}
+
+\subsection{Data Implemented in this Study}
+Lacking access to this proprietary data, we implemented a robust proxy dataset to demonstrate our framework's viability. (Interested readers may turn their attention to Appendix \textcolor{blue}{?} to learn about the detailed data generation methodologies we implemented. Generating this data was a large portion of this project.)
+
+\subsubsection{Course Geometry}
+We digitised Hole 9 of Mountain Meadows Golf Course in California, a Par 3 chosen for its rich interaction of obstacles such as bunkers and water hazards near the green. The course layout was scraped using OpenStreetMap \textcolor{blue}{cite}, and refined in QGIS to create accurate vector polygons compatible with the \texttt{Shapely} \textcolor{blue}{cite} library in Python. To test chained-decision-making (Par 4 strategy), we manually generated a hypothetical extension of this hole adding a secondary water hazard to increase strategic complexity. \textcolor{red}{insert images below}
+
+\subsubsection{The Scoring Surface}
+\begin{itemize}
+    \item \textbf{On the green:} We generated a dense sample of synthetic putting outcomes for our digitised green taking into consideration slope and distance in a three dimensional setting. The data generated simulates the "ideal" data described above, providing a count of the strokes to hole out for hundreds of points on the putting surface. \textcolor{red}{image}
+    \item \textbf{Around the Green:} Generating realistic outcomes around the green while truthfully, extremely valuable and informative, was deemed infeasible (due to the lack of available estimates, and the variance of outcomes and approaches that different players may take when approaching short range approaches or bunker shots), as such, we interpolated average "strokes to hole out" values from different lies from Mark Broadie's empirical estimates in Every Shot Counts \textcolor{blue}{cite}. These estimates can also be found in Appendix \textcolor{blue}{A} and allow us to assign a baesline expected value to any lie around the green without needing a generated point cloud for that specific coordinate.
+    
+    \item \textbf{Long Game:} Generating realistic shot-by-shot outcomes for the entire length of a hole is both complex and computationally expensive. For the purpose of this project, we realised that having this level of granularity in our data, is not necessary, but rather helpful in informing our prior. As such, we did not generate generate a distribution of outcomes of longer shots. Worthy of note, is that we came to the conclusion that, given the fact that the goal of the long game is usually to reach a favourable landing zone rather than hole out immediately, we can let our modelling logic generate the underlying distributions of these kinds of shots. \textcolor{orange}{ this is super clunky and 100\% not going to stay there, but its something i want to have there and just have to figure out the phrasing of.}
+\end{itemize}
+
+\subsubsection{Player-Specific Dispersions}
+
+We utilised a representative dataset of an "average" LPGA Tour player, derived from publicly available Trackman launch monitor statistics. This data set includes dispersion patterns for standard clubs from $60^\circ$ wedge to a Driver including a few "specialty" shots" (e.g. partial wedges). This data set models the standard dispersions required to optimise club and aimpoint selection and is directly substitutable with real data. \textcolor{red}{image}
+
+\section{Modelling and Methods}
+
+\subsection{Our Mathematical Framework: Decision Theory}
+
+Ben Hogan, who was widely regarded as one of the greatest ball strikers in golf history, famously said that even on a great day, he would probably at most hit four great shots in a round. As such, golf fundamentally poses a problem of decision-making under uncertainty. In statistical decision theory, we usually seek a decision rule $\delta(x_s, y_s)$ that minimises a specific loss function $\mathcal{L}(\theta, \delta(x_s,y_s))$, where $\theta$ represents the true state of nature (in our case the outcome of a shot) and $\delta(x_s, y_s)$ is our chosen action (club and aimpoint selection).
+
+In an ideal world, we would know the exact loss associated with every action. However, as much as players know where they want to land their ball, shot outcomes are stochastic, and as such we cannot minimise loss directly; we must instead minimise \textit{risk}, defined as the expected loss:
+$$R(\theta, \delta(x_s, y_s)) = \mathbb{E}[\mathcal{L}(\theta, \delta(x_s,y_s))]$$
+The choice of loss function, $\mathcal{L}$, critically shapes the optimal strategy. In standard statisical modelling, we often select symmetric loss functions. Minimising the expected Squared Error Loss $\mathcal{L}(\theta, \delta) = (\theta - \delta)^2 $, for example, leads to the mean of the distribution. Alternatively, minimising Absolute Error Loss $\mathcal{L}(\theta, \delta) = |\theta - \delta|$, leads to the median. These functions are centred around values, and they assume that an error of magnitude $\epsilon$ is equally detrimental regardless of direction.
+
+However, golf, like many real-world scenarios often presents asymmetric loss landscapes. Consider civil engineers designing bridges: building them a foot too long is a minor inefficiency and cost when compared to the catastrophic failure of building it a foot too short. Golf exhibits similar non-linearities. A shot missing a couple yards to the left might rest safely in a spot fractionally less optimal than the "perfect" spot, whereas one missing a couple yards right could plunge into a water hazard, incurring a fixed penalty stroke and a positional disadvantage.
+
+While we can conceptually define these loss scenarios, the resulting risk function $R(\theta, \delta(x_s,y_s))$ remains an elusive unknown surface over the two dimensional domain of a golf course. We don't have an analytical formula that outputs the expected loss for any given coordinate $(x,y)$: we only have sparse, noisy observations of shots and scores. To perform any sort of minimisation, we need to first learn the associated risk surface for a hole (no two holes are exactly alike!). The definition of such a surface requires a statistical method capable of taking in scattered data to predict a continuous landscape of expected strokes to hole out (ESHO), a task which we can leverage Gaussian Process Regression (GPR) for. 
+
+In this project, we define two distinct risk landscapes that our GPR models can learn, corresponding to different player objectives.
+\begin{enumerate}
+    \item \textit{Minimising Expected Strokes to Hole Out.} Here, our loss function is the count of strokes to hole out from any given starting position, $(x,y)$, in other words, $\mathcal{L}_{\mu}:\; \mathbb{R}^2 \to \mathbb{Z^+}$
+    $$\mathcal{L}_\mu(x_s, y_s) = \text{Strokes to hole out from }(x_s,y_s)$$
+    The associated risk, is the expectation of this value. More concretely, $R_{\mu}:\; \mathbb{R}^2 \to \mathbb{R}$, where,
+     $$R_{\mu} = \mathbb{E}(\mathcal{L}_\mu(x_s, y_s)) = \mathbb{E}(\text{Strokes to hole out from }(x_s,y_s))$$
+    This object seeks to identify regions where the average outcome is the lowest. It naturally accounts for asymmetric hazards because the penalised observations will fundamentally skew the local mean upwards. We use GPR to model this surface of expected of strokes.
+
+    \item \textit{Maximising Birdie Probability.} Here, we employ a utility-based loss function, where "success" and by complementation loss, is binary. If the outcome is a birdie or better, then the loss is minimal, that is $\mathcal{L}(x_s, y_s) = 0$; else, $\mathcal{L}(x_s, y_s) = 1$. More concretely, $\mathcal{L}_B: \mathbb{R}^2 \to \{0,1\}$. The risk, then becomes the probability of failure, $R_B: \mathbb{R}^2 \to [0,1] $,
+    $$R_B(x_s, y_s) = \mathbb{E}[\mathcal{L}_B(x_s, y_s)] = \mathbb{{P}}(\text{Strokes to Hole Out} > \text{Birdie}) $$
+    This reflects the "must-score" scenarios where the magnitude of a miss is irrelevant (a par is as useless as a triple bogey). Similarly, here we use GPR to model this probability surface directly, allowing us to find the specific aimpoint that maximises the likelihood of success, regardless of potential downsides.
+\end{enumerate}
+
+\subsection{Our Modelling Engine: Gaussian Process Regression}
+
+\subsubsection{Gaussian Process Regression to Learn Risk in Golf}
+In order to minimise the risk functions defined above, helping us find the optimal decision rules, we have to first estimate them. We treat the unknown risk surface (expected strokes or birdie probability) as latent functions $f(x,y)$ to be learned from the observed data. An ideal mechanism to do this is Gaussian Process Regression.
+
+Gaussian Process Regression is a tool that works intuitively with this project because golf courses are inherently spatial environments where nearby locations (on the same kind of surface) tend to have similar strategic values. If a player is 100 yards from the hole in the fairway, moving a couple yards on the same surface is unlikely to drastically change their expected score. GPR's smoothness asumptions align perfectly with this reality, allowing us to interpolate values across unobserved regions based on spatial proximity.
+
+Furthermore, golf scoring relationships are complex and non linear. A putt from 10 feet is not necessarily twice as hard as one from 5 feet, nor do two different 100-yard shots share the same difficulty if one is from deep rough and the other is off the fairway. Unlike rigid parametric models (such as linear regression) which might force specific functional forms, GPR is non-parametric. It lets the data speak for itself, "learning" arbitrary functional relationships and adapting to the true complexity of the three dimensional course surface.
+
+Lastly, GPR distinguishes betwen high-confidence predictions (where data is dense) and uncertain regions (where data is sparse or highly volatile) through its posterior variance. When asking questions about risk management, knowing our level of confidence in a strategy may be just as important as the strategy itself.
+
+\subsubsection{What are Gaussian Processes and what is Gaussian Process Regression?}
+
+Gaussian Processes are collections of random variables where any finite subset follows a multivariate Gaussian distribution. As expected, these are fully specified by their mean function $m(x) = \mathbb{E}(f(x))$  and covariance kernel $k(x,x') = \mathbb{E}[(f(x)-m(x))(f(x')-m(x'))]$:
+
+$$f(x) \sim \mathcal{GP}(m(x), k(x,x'))$$
+
+In our context, $x$ would represent the spatial coordinates on the hole, and $f(x)$ would represent the latent scoring potential of any given position. 
+
+\subsubsection{Covariance Kernels}
+The heart of Gaussian Processes are the kernel functions, $k(x,x')$ which encode our prior assumptions about the structure of the data. To capture the aforementioned spatial coherence of a golf course, we use the Radial Basis Function (RBF) kernel:
+
+$$k(x,x') = \sigma^2 \exp\left(\sigma^2-\frac{||x-x'||^2}{2l^2}\right)$$
+
+Where the hyperparameters dictate the surface's behaviour an flexibility. The length-scale, $l$, controls the flexibility of our functions controlling smoothness by dictating how quickly scoring difficulty changes over distance. Smaller values of $l$ drive correlations to 0, allowing functions to exhibit "wilder" or more jagged behaviour, while also relaxing the width of confidence bounds. The signal variance, $\sigma^2$, on the other hand controls the vertical amplitude of the function. 
+
+\subsubsection{The Posterior: From Prior to Prediction}
+
+\textcolor{red}{maybe i should change notation to be $x_s1, x_s2$ throughout the paper?}
+
+We model our observed data $y$ (i.e. actual strokes taken from a spot) as the latent function with Gaussian noise: $y = f(x) + \epsilon$, where $\epsilon \sim \mathcal{N}(0, \sigma^2_n)$. 
+
+Given a set of $n$ observed training points $X$ and outcomes $\mathbf{y}$, and a new test location $x_*$ (a new spot we want to evaluate), the joint distribution of the observed data and the unobserved latent function value $f_*$ is given by:
+
+\begin{align*}
+    \begin{bmatrix}
+        \mathbf{y}\\
+        f_*
+    \end{bmatrix} \sim 
+    \mathcal{N}\left (\begin{bmatrix}
+        K(X,X) + \sigma^2_nI & K(X,x_*) \\
+        K(x_*, X) & K(x_*, x_*)
+    \end{bmatrix}\right)
+\end{align*}
+
+Where $K(X,X)$ is the covariance matrix of the training points. By conditioning on the observed $\mathbf{y}$, we derive the posterior predictive distribution for the risk at our new location $x_*$:
+
+\[f_* |X, \mathbf{y}, x_* \sim \mathcal{N}(\bar f_*, \text{Var}(f_* | X, \mathbf{y}, x_*)\]
+
+\textcolor{red}{this notation for posterior variance doesn't seem right or clean enough, do I want to define what these are? like the result that gives me these? like their definition}
+
+Where the posterior mean $\bar f_*$ provides our point estimate for optimal strategy (predicted ESHO or Birdie Probability) and the posterior variance quantifies our uncertainty.
+
+This sort of regression, allows us not only to predict the mean outcome, but to understand the confidence of said predictions (essential for robust decision-making in areas suffering from sparse data density).
+
+\subsection{Modelling an Optimal Shot. Par 3s \& Minimisation of Strokes.}
+
+With our modelling mechanism in place, we can now simulate the decision-making process for a specific shot. We begin with a  Par 3, the "simplest" type of hole in golf, where we aim to reach the putting surface in a single stroke, and therefore don't necessarily have to chain strategic decisions. 
+
+Our optimisation follows a "green-to-tee" philosophy: by understanding the value of every landing spot on the green, we can inform the optimal decision from the tee (the choice that precedes it). This philosophy can be implemented because this problem exhibits optimal substructure, where an optimal solution to a problem depends on the optimal solutions to its smaller subproblems. This principle is known as Bellman's Principle of Optimality \textcolor{blue}{cite, kudos to Prof. Clark for introducing this to us in 140}.
+
+\textcolor{red}{at some point I should state that i don't really care to give optimal decisions on the putting green (this is obvious to me, but may not be to someone who doesn't know), this may be an assumption or smt}
+
+\subsubsection{Step 1: Fitting GPR to the Green}
+Our strategy builds on the GPR model fitted to the green data (as described in the previous section), evaluated at its posterior mean. This defines a continuous surface $f_G: \Omega_{green} \subset \mathbb{R}^2 \to \mathbb{R}$, which outputs the expected number of strokes to hole out (ESHO) from any coordinate on the putting surface. Because it is fit to the unique sample of data specific to this green and pin position, $f_G$ intrinsically accounts for the non-linear difficulties (slope, tiering) that a simple distance-based function would miss.
+
+\textcolor{blue}{insert green gpr image}
+
+When a simulated shot lands on the green, we compute its "cost" by evaluating its scoring potential from its resting position. If a shot lands on the green, the cost is retrieved directly from $f_G$. Alternatively, if it misses the green, we employ an interpolation function $f_A: \mathbb{R}^+ \times \mathcal{C} \to \mathbb{R}^+$, where $\mathcal{C} = \{F, R, S\}$ represents the set of lie conditions (fairway, rough or sand trap). Under the hood, $f_A$ wraps a set of univariate functions derived from Broadie's empirical baselines by converting the coordinate vector into a Euclidean distance to the pin, and evaluating it with the appropriate lie function. Finally, if a shot lands in a water hazard, we simulate a "drop" at the nearest point of relief (drawing a direct line from the balls starting point, and simulating that the ball landed at the first intersection with land), incurring a penalty stroke and recursively evaluating the cost from the new position.
+
+Formally, we define a global function $AG(x,y)$, representing the expected strokes to hole out from any location $(x,y)$ near or on the green relative ot the hole at $(x_h, y_h)$, as:
+\[
+AG(x,y) = \begin{cases}
+    f_G(x,y) & \text{if } (x, y) \in \Omega_{green} \\
+    f_A\left (||(x,y) - (x_h, y_h)||_2, \text{Lie}(x,y)\right) & \text{if } (x, y) \in \Omega_{fairway}\; \cap \Omega_{rough} \; \cap \Omega_{sand}  \\
+    1 + AG(x_{drop}, y_{drop}) & \text{if } (x, y) \in \Omega_{water}
+\end{cases}
+\]
+\subsubsection{Step 2: Simulating Player Outcomes}
+In order to evaluate the success of a strategy in approaching the green, we must be able to model and simulate the stochastic nature of a player's ball striking. We achieve this by fitting a normal distribution to the player's dispersion data, sampling from this normal distribution, and rotating these samples
+
+\begin{enumerate}
+    \item \textit{Fitting Bivariate Gaussians.} First, we analyse the player's historical shot data to create statistical profiles for the different shots players may have for different clubs. Using standard statistical libraries \textcolor{blue}{remember and cite} in Python, we empirically estimate the centre of the data $\hat\mu_s$ and the covariance matrix $\hat\Sigma_s$ for the landing coordinates of shots aimed along a central target line (along the unit vector $j$). 
+     \[(X,Y)_s \sim \mathcal{N}(\hat\mu_s, \hat\Sigma_s)\]   
+     This step "learns" a player's unique dispersion shape, capturing how their distance control and directional accuracy may vary with different shots.
+
+     \item \textit{Monte Carlo Simulation.} We then employ a Monte Carlo simulation to generate a synthetic dataset of potential outcomes. For a selected club, we draw $N$ random samples from the fitted multivariate normal distribution. 
+     $$\mathbf{S}_s = \{s_1, s_2, \ldots, s_N\} \text{ where } s_i \sim \mathcal{N}(\hat\mu_s, \hat\Sigma_s)$$
+     This creates a sample of shot outcomes statistically mirroring the player's tendencies, providing robust sample sizes for risk assessment that we would otherwise not be able to physically gather on the course.
+
+     \item \textit{Changing Aimpoints.} Finally, in order to evaluate different strategic aimpoints, we resample and applya linear transformation to our simulated shots. If a player aims at angle $\theta$ relative to the pin, we rotate the entire set of simulated outcomes $\mathbf{S}_s$ using a standard rotation matrix $R(\theta)$:
+     \begin{align*}
+         R(\theta) &= \begin{bmatrix}
+             \cos \theta & - \sin \theta \\
+             \sin \theta & \cos \theta
+         \end{bmatrix} \\
+         s'_{i,\theta} &= R(\theta)s_i
+     \end{align*}
+     This allows us to evaluate the player's dispersion patterns testing at different aimpoints from $-20 ^\circ$ to $+20 ^\circ$ relative to the pin, evaluating the expected cost of rotated samples across the course's risk surface.
+\end{enumerate}
+\textcolor{blue}{insert sample evaluated on green image}
+
+\subsubsection{Step 3: Minimising Expected Strokes}
+
+We proceed to the optimisation step, which returns the optimal strategy. For a given strategy, defined by a labeled shot type $s$ and aimpoint $\theta$, we have a set of $N$ simulated landing positions $\mathbf{S}_{s,\theta} = \{s_1', s_2', \ldots, s_N'\}$. 
+
+For each simulated shot $i$, we evaluate the outcome by querying our function $AG(x,y)$ at the landing coordinate $s_i' = (x_i, y_i)$. The "cost" of the shot is the sum of the stroke taken to reach that point plus the expected strokes required to hole out.
+$$\text{Cost}_i = 1 + AG(x_i, y_i)$$
+We then aggregate these individual outcomes to compute the empirical risk (average expected strokes) for the specific strategic configuration:
+$$R_\mu = \frac{1}{N} \sum ^N_{i=1} (1+AG(x_i, y_i))$$
+This computation is repeated iteratively across all feasible shots in the player's bag and a discretised range of aimpoints (e.g., $\theta \in [-20^\circ, +20^\circ]$ in $1^\circ$ increments). The optimal strategy for the this shot and by extension, hole, is the pair $(s^*, \theta^*)$ which minimises the risk surface:
+
+$$\delta_{opt} (x_s, y_s) = (s^*, \theta^*) = \arg \min_{s, \theta} R_\mu(s, \theta)$$
+
+We convert the angle to yards (left or right of the pin) by using basic trigonometric conversions that make the output actionable for the player. This process transforms abstract data into concrete recommendations that the player can then operate on.
+\textcolor{blue}{add image of output}
+
+\subsection{Modelling Chained Decisions. Par 4s \& Recursive Optimisation.}
+Perhaps more innovative than the implementation of GPR on Par 3s, is our extension of this work, applying GPR to longer holes requiring chained decision-making. Our optimisation strategy for Par 4 holes continues the recursive "green-to-tee" philosophy. 
+
+The key insight is that we think of Par 4s as simply being Par 3s where the tee box is variable. To optimise the actual tee shot, we first understand the strategic value of every possible intermediate landing zone in the fairway, rough or sand. We achieve this through a two-stage process: pre-computing the optimal approach from all possible positions and then fitting a GPR surface to those optimal values.
+
+\subsubsection{Step 1: The "Strategic Blanket" (Pre-computing optimal Approaches)}
+We begin by evaluating a dense grid of potential second-shot locations, in our case ranging from $50$ to $350$ yards from the green. We treat each grid point $(x_j, y_j)$ as a temporary tee box.
+
+From each point, we run the complete Par 3 simulation algorithm described in the previous subsection.
+\begin{enumerate}
+    \item Identify the lie at $(x_j, y_j)$ - fairway, rough, or bunker –  to select the appropriate shot distribution to sample from (in this case we wont always hit off the fairway, as assumed in Par 3s). If $(x_j, y_j)$ is water, we simulate dropping with the same logic described in the previous section.
+    \item Simulate shots for all clubs and aimpoints.
+    \item Identify the strategy $(c^*, \theta^*)$ that minimises expected strokes from that specific location.
+\end{enumerate}
+This process yields a minimal ESHO value for every point on the grid. We then fit a \textit{second} Gaussian Process model to these optimal values. This creates a new continuous surface $f_{approach}: \mathbb{R}^2\to \mathbb{R}^+$ which we name a strategic blanket. Instead of representing the raw difficulty of the hole, this surface represents the best possible expected score a player can achieve from any location, assuming they play optimally from that point forward.
+\textcolor{blue}{insert hole gpr image}
+
+\subsubsection{Step 2: Optimising the Tee Shot}
+With the $f_{approach}(x,y)$ acting as our main evaluation function, the Par 4 tee shot optimisation becomes mathematically identical to the Par 3 problem.
+
+We simulate tee shots for long-range clubs (Driver, Woods, and long irons) using the player's dispersion, if possible from $\Sigma_{tee}$. For each simulated landing point $s'_i = (x_i, y_i)$, the cost is no longer derived from the green model, but from our strategic blanket:
+$$\text{Cost}_i = 1 + f_{approach}(x_i, y_i)$$
+Our optimisation seeks the shot type and aimpoint that lands the ball in the "valleys" of $f_{approach}$ (areas where the subsequent shot is easiest and therefore the expectation of the optimal choice is lowest) - while avoiding the "peaks" (hazards or difficult angles).
+
+$$R_{\mu_{tee}}(s, \theta) = \frac{1}{N} \sum^N_{i =1} (1 + f_{approach}(x_i, y_i))$$
+
+As such,
+$$\delta_{opt} (0, 0) = (s^*_{tee}, \theta^*_{tee}) = \arg \min_{s, \theta} R_{\mu_{tee}}(s, \theta)$$
+
+This recursive framework allows the model to make nuanced trade-offs potentially suggesting more conservative options such as hitting the shorter distance club not just to ensure landing on the fairway, but specifically because the Driver may introduce other trouble (water or bunkers into play).
+
+\textcolor{blue}{add image of final output for par 4 with good description of how it should be read}
+
+\subsection{Modelling Alternative Loss Functions. Maximisation of Birdie Probabilities.}
+
+Up until now, our optimisation function has focused on minimising the expected number of strokes to hole out over a hole rendering strategies that balance aggressivity with precaution to produce the best long term averages. Often, however, golfers are faced with threshold scenarios where consistency becomes inconsequential. If a player needs a birdie to make the cut, force a playoff or win a tournament, a Par may be functionally equivalent to Double Bogey. In these events, the objective shifts from minimising expected loss to maximising the probability of favourable outcomes.
+
+To model this change in objective, we alter our loss function by converting the data we train our GPR on.
+
+\subsubsection{Step 1: The Probability Surface}
+We begin by returning to the raw data generated on the green. In the standard model, each data point was a count of strokes (e.g., 1, 2, or 3). For this new objective, we perform a binary conversion on the training data:
+
+\[
+\mathcal{L}(x,y) = \begin{cases}
+1, \; \text{if number of strokes} = 1  \;\text{(holed)}\\
+    0, \; \text{if number of strokes} > 1  \;\text{(missed)}
+\end{cases}
+\]
+
+\textit{Why do we care about "one-putts"?} On a Par 4, a player typically reaches the green in two strokes. Therefore, the most secure way to score a birdie (score of 3) is to take at most one putt to hole the ball. By converting our green map to the probability of a 1 putt, we effectively map the probability of converting a birdie opportunity once we have hit the green. This logic extends to both Par 3s and Par 5s.
+
+We then fit a new GPR model to these binary outcomes. Although the inputs are discrete, the GPR learns a continuous latent function $f_{prob}: \mathbb{R}^2 \to [0,1] $ representing the conditional probability of one putting from any location on the green. This creates a "birdie probability surface", which decays exponentially: being 3 feet away from the cup offers massive reward, whereas being 15 feet away might offer near 0 value in a birdie necessary circumstance.
+
+\subsubsection{Step 2: Recursive Maximisation}
+With this GPR surface, we re-run the original simulation mechanism witha modified evaluation logic:
+
+\begin{enumerate}
+    \item \textbf{Approach Simulation:} For all simulated approach shots, $s'_i$ we query the new surface:
+
+    \[
+    \mathbb{P}(Birdie|s'_i) = \begin{cases}
+        f_{prob}(x_i, y_i) \; \text{if } s_i' \in \Omega_{green} \\
+        0 \; \text{else}
+    \end{cases}
+    \]
+Note that we make the simplifying assumption that shots missing the green have negligible probability of being holed for birdie compared to putts.
+
+    \item \textbf{Risk Calculation:} The risk we seek to minimise is the probability of failure (or conversely, we maximise the probability of success):
+$$R_{B}(s, \theta) = 1 - \frac{1}{N} \sum_{i=1}^{N} P(Birdie | s'_i)$$
+\end{enumerate}
+
+\subsection{Step 3: Aggressive Tee Shots}
+
+For Par 4s, we repeat the "strategic blanket" process described in the previous section, however, instead of evaluating for the lowest score, we map the highest birdie probability achievable from every fairway location.
+
+When optimising the tee shot,the model aggregates these probabilities. The output can often be drastically different from the conservative model, where the birdie maximisation model might recommend a driver to a narrow landing zone. Even if the Driver brings water in play, it might be the only club capable of reaching the specific patch of the golf course that offers non-zero probability of making a birdie.
+
+
+
+
+
+\section{Results}
+
+It works! Really cool differences betwen birdie and otherwie! Hurrah!
+
+
+\section{Discussion}
+Future extensions
+
+\begin{itemize}
+    \item \textbf{Interpretation:} What do the results mean?
+    \item \textbf{Limitations:} Be honest about biases or sample size issues.
+    \item \textbf{Future Work:} What should be done next? \cite{qgis}
+\end{itemize}
+
+% -------------------------------------------------------
+% END MATTER
+% -------------------------------------------------------
+\newpage 
+\printbibliography[title={References}]
+
+\vspace{2cm}
+
+\section*{Generative AI Statement}
+\noindent
+Brief statement describing how (if at all) generative AI tools were used in your work and the preparation of your submission.
+
+\end{document}
+
+
+
+

@@ -1,0 +1,283 @@
+---
+title: "JQASdraft1 — Review Notes & Open Items"
+author: "Federica (notes compiled by Claude, from the Parallelisation/convergence work)"
+date: "2026-09-21"
+format:
+  html:
+    embed-resources: true
+    toc: true
+    df-print: kable
+---
+
+Source reviewed: `JQASdraft1.tex` (confirmed as the current draft — it's the
+one with a matching compiled `JQASdraft1.pdf`; `draft1/2/3.tex` and
+`onpar.tex` look like earlier/stub iterations). Everything below is
+organized so each bullet can become a checklist item or a PR.
+
+# 1. The headline problem: N = 300 is stated as sufficient, and it isn't
+
+This is the single biggest inaccuracy in the paper, and it touches the
+Abstract, Section 3.6.1 (`subsec:Convergence`), and every figure caption
+that cites `N=300`.
+
+- **Abstract** literally flags itself for review: *"Our model requires
+  approximately 300 `\verify` simulated outcomes per decision location to
+  reach over 80% convergence"* — the `\verify` macro renders as blue
+  **VERIFY** text in the compiled PDF. This was never resolved.
+- Section 3.6.1 says: *"to attain an overall 80% convergence and above for
+  our model, we require $N \geq 300$"* and reports mean sequential match
+  rate ~80% at $N \approx 300$, narrowly clustering at 87–91% across seeds,
+  **never reaching 100% at the $N=300$ ceiling**, with 35/280 grid points
+  failing cross-seed agreement.
+- That whole study used the **old fixed-yard aim grid** (±40y in fixed
+  yard steps), the same grid our later work in
+  `Parallelisation/convergence/` showed has a real, quantifiable flaw: its
+  *angular* resolution shrinks with distance from the pin (fan-width-vs-distance
+  r = −0.93), so far-range grid points were effectively testing
+  near-duplicate directions. That's a confound sitting underneath the old
+  N=300 result — some of that non-convergence is a grid-resolution
+  artifact, not just genuine ties.
+- We've since re-run the full study properly: **50 seeds, fixed
+  $\pm 40°/5°$ angle grid, $N_{max}=2000$**, using the rigorous
+  equivalence-set / cross-seed-Jaccard methodology (not the old ad-hoc
+  "±2°/±3° tolerance match rate"). Actual numbers from that run:
+
+  | metric | value |
+  |---|---|
+  | grid points converged (100% within-seed stable) by N=2000 | **100% (280/280)**, was non-convergent under the old grid |
+  | mean equivalence-set size at convergence | 1.16 (mostly a single clear winner) |
+  | within-seed "stable now" crosses 90% | N ≈ 530 |
+  | within-seed "stable now" crosses 95% | **N ≈ 980** |
+  | within-seed "stable now" at N=2000 (never reaches 100%, by design — see below) | 97.6% |
+  | cross-seed Jaccard agreement at N=2000 | 0.871, still rising slowly (diminishing returns) |
+
+- **Recommendation to report:** cite **N ≈ 1000** as the practical
+  operating point (95% "stable now" crossing, clear diminishing-returns
+  knee after that), not N=300. Explicitly state that 100% stability is
+  *not* the target — a residual few percent of points are genuinely tied
+  strategies (see §2 below), and chasing 100% "stable now" misunderstands
+  what the metric can show.
+- Fix the broken sentence in the Set-1 figure caption (line ~139):
+  *"evaluated on the $N=300$-shot strategy grid made up of ."* — trailing
+  "made up of ." is an incomplete clause, and the N value needs updating
+  regardless.
+- Every other `N=300` reference needs the same update once the images are
+  regenerated (Section 5 of this doc lists them): line 354
+  (`shot_outcomes_stacked.png` caption), line 563
+  (`birdie_grid_and_gpr_plasma_stacked.png` caption), line 638 (sensitivity
+  study, "$M=280$ strategy grid with $N=300$"), and the docstrings of
+  `gen_gpr_comparison_fig.py` (reads `approach_N0300.csv` by filename) and
+  `gen_teeshot_recommendation_fig.py` ("Optimal tee-shot recommendation,
+  N=300").
+
+# 2. Section 3.6.1 / 3.6.2 methodology needs a rewrite, not a patch
+
+- The paper's own author-notes (`\nts{...}`, left in the source) already
+  flag this section as unfinished:
+  - line 602: `\nts{add equation}` — the $M=280$-point optimal snapshot
+    recomputation step has no formal equation.
+  - line 607: `\nts{i probably want to change this. yards is better.}` —
+    the "sequential match rate" tolerance is degrees (±2°/±3°), which the
+    author already flagged as the wrong unit.
+  - line 628: `\nts{maybe expand}` on the equivalence-set definition.
+  - line 630: `\nts{heatmap with multiple combinations plot}` — never made.
+  - line 632: `\nts{I want to re-run convergence and see if the entire
+    strategy grid remains statistically indistinguishable from the rest no
+    matter how N is increased and when that happens.}` — **this is now
+    directly answered** by the new study: no, it doesn't stay universally
+    tied — 100% of points converge by N=2000, with a small mean
+    equivalence-set size (1.16). This note-to-self can be resolved and
+    removed, replaced with the actual finding.
+- The two convergence metrics described (sequential match rate,
+  cross-seed agreement by identical club) are cruder than what was
+  actually used in the newer study. Recommend replacing this
+  sub-subsection's methodology description with the equivalence-set /
+  1-SE-band framework already written up carefully in
+  `Parallelisation/convergence/MyScripts/convergenceNEW.qmd` — it already
+  has the correct math, the "why a true tie never converges" explanation
+  (indifference-zone / hard-threshold-testing argument — see next
+  bullet), and real, current numbers.
+- **Missing explanation the paper needs:** why within-seed "stable now"
+  plateaus below 100% (97.6% at N=2000) is not a sign of insufficient N —
+  it's a structural consequence of testing membership in a set via a hard
+  threshold when the true difference is at or near zero (a ranking-and-
+  selection / indifference-zone problem). The estimated-gap/SE ratio does
+  not concentrate for a true tie, so no amount of additional sampling
+  makes the hard-threshold test converge for those specific points. This
+  argument is already written out in the convergence qmd's "Conclusions"
+  section and should be summarized here.
+- Section 3.6.1 also states the $80$–$120$ yard band converges *worst*,
+  "opposite of our original hypothesis" — worth double-checking this
+  finding still holds under the new fixed-angle grid, since the old
+  finding may partly have been an artifact of the shrinking-angular-
+  resolution confound described in §1. This is worth re-deriving from the
+  new N2000 data (`equiv_non_converged_gridpoints.csv` /
+  `equiv_sequential.csv` in `equivalence_results_N2000/`) rather than
+  restating the old claim as-is.
+
+# 3. Other inaccuracies / loose ends found while reading
+
+- Section 3.7 (`subsec: genObs`, sensitivity study) line 640:
+  `\nts{BIG PROBLEM AXIS OF ROTATION IS WRONG. maybe i want to add another
+  one for different sensitivities later on. Point out tilt in
+  description.}` — an unresolved correctness flag on the sensitivity
+  figure's rotation axis. Needs to be either fixed or the caveat written
+  into the text; right now it's silently wrong with a private note about
+  it.
+- Line 650: `\nts{Complete results and discussion. Should sensitivity go
+  here or in results? maybe plot with arrows - what does that say?}` —
+  structural question about section placement, unresolved.
+- Line 674 (Discussion): `\nts{add that our work is a precursor which
+  roll-out and vertical trajectory can extend}` — a sentence the author
+  meant to add and didn't.
+- The **Results §4.2 "Strategic Divergence"** subsection (line 660)
+  references `Figure \ref{fig:strategy_comparison}` in its very first
+  sentence, but that figure block is entirely commented out (lines
+  478–501), with its own caption reading `\nts{Completely replace these
+  plots}`. **This produces a broken `??` reference in the compiled PDF.**
+  This is the single most visible bug in the current draft — it's in the
+  Results section, not a footnote.
+- Line 645–647: a placeholder figure with **caption literally "Caption"**
+  (`holeoutline_sensitivity_dist0.00_disp1.0000.png`, label
+  `fig:placeholder`) — needs a real caption or removal.
+- Line 611 mixes two different metrics' N and match-rate numbers from the
+  old 100-seed study; once regenerated, re-verify every number in this
+  paragraph, not just the headline N.
+- `commands.tex` defines `\verify` as a visible **VERIFY** flag — worth
+  grepping the whole doc for it before submission; currently there's only
+  the one Abstract instance, but it's a useful pre-submission linter to
+  re-run.
+
+# 4. Missing sections / content the recent work supports adding
+
+- **A short "Grid resolution confound" paragraph** in §3.6 explaining why
+  the aim grid itself needed to change (fixed-yard → fixed-angle) before
+  the convergence question could be answered cleanly. This is a genuine
+  methodological finding (not just a bug fix) and is currently invisible
+  in the paper — the only trace of the old grid's flaw is implicit in the
+  now-outdated N=300 numbers.
+- **A restated definition of what "convergence" means for this model** —
+  the paper should say explicitly, in one place, that two different
+  things are being measured (within-seed stability across increasing N,
+  vs. cross-seed agreement on the *same* N), and that neither is expected
+  to reach 100% given genuine ties, and why that's fine for a decision-
+  support tool (the equivalence set, not a single answer, is the actual
+  product).
+- **A sentence on the practical compute cost implication**: N≈1000 with a
+  17-option angle grid vs the old N=300/17-yard-option grid — is this
+  more or less total simulation work? Worth stating plainly (more shots
+  per point, same option count, but far fewer wasted points needing to be
+  rerun/flagged as unstable) so a reader can judge the tradeoff.
+- The Appendix currently has no mention of the HPC/Slurm array-job
+  infrastructure (`Parallelisation/convergence/submit_hpc.sh`,
+  `run_hpc_worker.py`) used to actually produce the 50-seed × N=2000
+  sweep — for a JQAS submission this level of compute probably deserves
+  at least a one-line acknowledgement of how it was produced (seeds run
+  in parallel on a Slurm array), since 50 seeds × 2000 shots × 280 points
+  × 17 aim angles is a non-trivial computational claim a reviewer may ask
+  about.
+
+# 5. Image inventory: used, unused, and missing
+
+## Currently included and fine as-is (no N/hazard dependency)
+- `ShotData2.png` — location-specific outcome data (real/proxy data viz)
+- `LPGAShots.png` — player dispersion viz
+- `gprGreen.png` — par-3 green risk surface
+- `sampling_locations.png` — high-fidelity sampling zone locations
+
+## Currently included but need regeneration (N and/or hazard dependent)
+- `fig1_low_fidelity_course_translucent.png` / `fig2_high_fidelity_course_translucent.png`
+  (Set 1 low/high-fidelity pair) — N=300 grid, includes the secondary hazard.
+- `sampledPutts.png` — Set 2 item; existing `PlotsNeeded.txt` note ("more
+  distinguishable hole, consistent colours") is still open regardless of N.
+- `shot_outcomes_stacked.png` — N=300 caption, ±10y aimpoint example.
+- `gpr_comparison_stacked.png` — built from `approach_N0300.csv` by
+  filename; low-fidelity + multi-fidelity fusion comparison.
+- `birdie_grid_and_gpr_plasma_stacked.png` — N=300 grid + birdie GPR fit.
+- `teeshot_recommendation_esho_vs_birdie.png` — N=300, ESHO vs birdie tee
+  shot comparison; explicitly hazard-dependent (whole point is the
+  water-carry decision).
+
+## Commented out / effectively missing
+- `GPRPar4.png` ("Strategic Blanket") — commented out at line 412, no
+  replacement given.
+- `ESHOOptimalPar4.png` + `BirdieOddsOptimal.jpg` — the entire
+  `fig:strategy_comparison` figure block is commented out (lines
+  478–501), yet **is still referenced by the Results text** (line 661).
+  This is the top-priority missing image — the Results section's main
+  claim currently points at nothing.
+- Real caption needed for `holeoutline_sensitivity_dist0.00_disp1.0000.png`
+  (currently "Caption").
+
+## Missing entirely, per `PlotsNeeded.txt` cross-check
+- **Set 3, item 1**: "visualisation of different dispersion" — the
+  sensitivity section (§3.7) currently has exactly one hole-outline image
+  for a single (dist=0, dispersion=1.0) configuration. There is no
+  side-by-side or overlay comparing multiple dispersion settings, even
+  though the whole point of §3.7 is to study dispersion/distance
+  sensitivity across 81 configurations.
+- **Set 3, item 2**: legends need to be larger on the dispersion plots —
+  still open, unresolved by the single placeholder image.
+- **Set 5**: "arrow plots for general trends — appendix" — never made it
+  into the paper. `Parallelisation/convergence/MyScripts/convergenceNEW.qmd`
+  already has several arrow/fan plots (aim-direction rays colored by
+  stability) built from real data that could be adapted for an appendix
+  figure.
+- **Set 7**: "Trends: how does dispersion/distance affect outcome" — §3.7
+  runs 81 configurations but shows none of the actual trend (e.g., mean
+  ESHO or optimal tee-shot placement vs. distance-shift α and dispersion-
+  scale β). This is a genuinely missing figure, not just an unfinished
+  one — the sensitivity study's main output currently has no visualization.
+
+# 6. Image regeneration plan: keep OB, drop the secondary hazard
+
+Per your instruction: regenerate the hazard-dependent images with OB
+logic intact, but **without** the additional (secondary/"right-hand")
+water hazard that was manually added to hole 9 to create Par-4 strategic
+complexity (`JQASdraft1.tex` line 148–149: *"we manually generated a
+hypothetical extension of hole 9 adding a secondary water hazard to
+increase strategic complexity"*).
+
+**Scope check — this is not a plotting toggle.** The secondary hazard
+(`new_hazard3`, lie type `water_hazard_3`, centroid ≈ (0, 210), rotated
+110°) is built directly into hole geometry construction in
+`Parallelisation/convergence/core.py::build_hole()` and duplicated in
+`Multi-Fidelity GP/generate_observed_data.py`. It isn't just drawn on
+plots — it's a real lie zone the simulation classifies shots against, so
+removing it changes actual simulated outcomes (lie classification, OB/
+water penalty logic, GPR fits, multi-fidelity fusion, birdie odds, tee-
+shot optimisation), not just what's rendered. Every image below would
+need re-simulation, not just a re-plot.
+
+**Affected figures (all currently N=300 + include the secondary hazard):**
+- `fig1_low_fidelity_course_translucent.png` / `fig2_high_fidelity_course_translucent.png`
+- `gpr_comparison_stacked.png`
+- `birdie_grid_and_gpr_plasma_stacked.png`
+- `teeshot_recommendation_esho_vs_birdie.png`
+- the still-missing `fig:strategy_comparison` replacement (Section 5)
+- `sampling_locations.png` (zones are drawn relative to `new_hazard3`;
+  some hotspot zones like "right fringe of new_hazard3" may need
+  redefining if the hazard is dropped)
+
+**Suggested approach** (mirrors how the aim-grid change was done —
+additive, opt-in, doesn't disturb other callers):
+- Add an `include_hazard3: bool = True` parameter to `build_hole()` in
+  `core.py`, defaulting to the current behaviour. When `False`, skip
+  loading/attaching `new_hazard3` so lie classification simply never
+  matches it (treat that area as whatever it would otherwise be — fairway
+  or rough) and it's not drawn.
+- Re-run the full Par-4 approach/tee-shot/multi-fidelity/birdie pipeline
+  once with `include_hazard3=False` and `N≈1000` (per Section 1's
+  recommendation) to produce a consistent, matched set of figures.
+- Regenerate all six affected images from that one consistent run so the
+  paper doesn't end up mixing hazard/no-hazard or N=300/N=1000 figures
+  across sections.
+
+**This is a separate, sizeable follow-up task** (touches `core.py`,
+`generate_observed_data.py`, and 4+ figure-generation scripts) — flagging
+it here rather than starting it silently. Confirm before I begin:
+1. `include_hazard3=False` as the mechanism (vs. some other approach)?
+2. N≈1000 for the regenerated figures (matches Section 1's recommendation)?
+3. Should `sampling_locations.png`'s hotspot zones be redefined, or left
+   referencing the hazard fringe even though the hazard itself is gone
+   from the plot?

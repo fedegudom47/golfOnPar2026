@@ -84,7 +84,7 @@ ax.grid(True, linestyle='-', alpha=0.6)
 # Force equal aspect ratio so 10 yards left looks the same as 10 yards long
 # However, since carry is huge compared to side, 'equal' might make it too thin.
 # Often 'auto' is better for this specific rotated view, but let's try to keep it proportional.
-# ax.set_aspect('equal') 
+# ax.set_aspect('equal')
 
 # Legend formatting
 handles, labels = ax.get_legend_handles_labels()
@@ -96,5 +96,5 @@ ax.legend(handles[::-1], labels[::-1], title="Shot", bbox_to_anchor=(1.02, 1),
           handletextpad=0.6, markerscale=2.0, fontsize=14, title_fontsize=16)
 
 plt.tight_layout()
-plt.savefig('untitled folder/On_Par/images/LPGAShots.png', dpi=150, bbox_inches='tight')
+plt.savefig('TowardsEnd/On_Par/images/LPGAShots.png', dpi=150, bbox_inches='tight')
 print("saved LPGAShots.png")

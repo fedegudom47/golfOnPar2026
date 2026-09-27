@@ -1,5 +1,5 @@
 """Two GPR fits, stacked: (1) a regular single-fidelity GPR fit to the
-low-fidelity simulated ESHO grid (approach_N0300.csv, same data as
+low-fidelity simulated ESHO grid (approach_N1000.csv, same data as
 fig1_low_fidelity), and (2) the Kennedy-O'Hagan multi-fidelity fusion of
 that same low-fidelity data with the high-fidelity observed strokes
 (observed_esho_data.csv) — reusing the exact model classes and fitting
@@ -8,10 +8,13 @@ session's low-fidelity CSV instead of its own bundled one.
 
 Course/tee/pin drawn with this session's standing conventions: translucent
 fill, black-square tee, white/black-edge pin (drawn last), x_1/x_2 axes,
-whole scene rotated 90 deg clockwise. Colour scales are independent between
-panels (different quantities: ESHO vs. observed strokes). Training-point
-dots differentiate low-fidelity vs. high-fidelity data by marker, not by
-the value colour scale.
+whole scene rotated 90 deg clockwise. Colour scale: panel 1 (single-fidelity)
+uses plain viridis_r over its own range. Panel 2 (multi-fidelity) reuses
+that EXACT same viridis_r mapping for any value within panel 1's range (so
+a given ESHO value is the same colour in both panels), then fades toward
+white (better than panel 1 ever saw) or black (worse) for values outside
+that shared range. Training-point dots differentiate low-fidelity vs.
+high-fidelity data by marker, not by the value colour scale.
 """
 from __future__ import annotations
 
@@ -39,7 +42,7 @@ from core import build_hole, _LIE_COLORS  # noqa: E402
 HERE = Path(__file__).parent
 LOW_FIDELITY_CSV = (
     HERE.parent / "Parallelisation" / "convergence" / "outputs"
-    / "full_hole_paper" / "approach_N0300.csv"
+    / "full_hole_paper" / "approach_N1000.csv"
 )
 
 ROT = [0, 1, -1, 0, 0, 0]  # 90 deg clockwise: (x, y) -> (y, -x)
@@ -131,6 +134,39 @@ def draw_markers(ax):
             markerfacecolor="white", markeredgecolor="black", markeredgewidth=1.3)
 
 
+# ── Shared colour scale: panel 2 (multi-fidelity) uses the EXACT same
+# viridis_r mapping as panel 1 over panel 1's own value range, so a given
+# ESHO value reads as the same colour in both panels — then simply fades
+# toward white (better than anything panel 1 saw) or black (worse) for
+# values outside that shared range, rather than renormalising independently.
+_vir_r = plt.get_cmap("viridis_r")
+vmin1, vmax1 = float(Z_sim.min()), float(Z_sim.max())
+vmin2 = min(vmin1, float(Z_fused.min()))
+vmax2 = max(vmax1, float(Z_fused.max()))
+
+
+def _extended_viridis_r(vmin1, vmax1, vmin2, vmax2, n=512):
+    """viridis_r over [vmin1, vmax1], extended toward white below vmin1 and
+    toward black above vmax1, sampled uniformly over [vmin2, vmax2]."""
+    t_lo = (vmin1 - vmin2) / (vmax2 - vmin2) if vmax2 > vmin2 else 0.0
+    t_hi = (vmax1 - vmin2) / (vmax2 - vmin2) if vmax2 > vmin2 else 1.0
+    ts = np.linspace(0, 1, n)
+    colors = np.empty((n, 4))
+    for i, t in enumerate(ts):
+        if t <= t_lo:
+            frac = 0.0 if t_lo == 0 else t / t_lo
+            colors[i] = (1 - frac) * np.array([1, 1, 1, 1]) + frac * np.array(_vir_r(0.0))
+        elif t >= t_hi:
+            frac = 0.0 if t_hi == 1 else (t - t_hi) / (1 - t_hi)
+            colors[i] = (1 - frac) * np.array(_vir_r(1.0)) + frac * np.array([0, 0, 0, 1])
+        else:
+            colors[i] = _vir_r((t - t_lo) / (t_hi - t_lo))
+    return mpl.colors.ListedColormap(colors)
+
+
+cmap2 = _extended_viridis_r(vmin1, vmax1, vmin2, vmax2)
+norm2 = mpl.colors.Normalize(vmin=vmin2, vmax=vmax2)
+
 # ── Panel 1: single-fidelity GPR on the low-fidelity grid alone ────────────
 draw_course(ax1)
 cm1 = ax1.contourf(X_rot, Y_rot, Z_sim, levels=30, cmap="viridis_r", alpha=0.72, zorder=2)
@@ -142,13 +178,14 @@ ax1.scatter(low_rot[:, 0], low_rot[:, 1], s=14, facecolor="white", edgecolor="bl
 draw_markers(ax1)
 ax1.set_aspect("equal")
 ax1.set_title(r"Single-fidelity GPR — $f_{sim}$ fit to $\mathcal{D}_L$ alone")
-ax1.set_xlabel("$x_1$ (yards)"); ax1.set_ylabel("$x_2$ (yards)")
+ax1.set_xlabel("$x_2$ (yards)"); ax1.set_ylabel("$x_1$ (yards)")
 ax1.legend(loc="upper right", fontsize=8, framealpha=0.85)
 
 # ── Panel 2: multi-fidelity fused GPR (KOH), trained on D_L + D_H ──────────
 draw_course(ax2)
-cm2 = ax2.contourf(X_rot, Y_rot, Z_fused, levels=30, cmap="viridis_r", alpha=0.72, zorder=2)
-fig.colorbar(cm2, ax=ax2, fraction=0.035, pad=0.02, label=r"$f_{fused}=\rho f_{sim}+\delta$ (strokes)")
+cm2 = ax2.contourf(X_rot, Y_rot, Z_fused, levels=30, cmap=cmap2, norm=norm2, alpha=0.72, zorder=2)
+sm2 = plt.cm.ScalarMappable(cmap=cmap2, norm=norm2); sm2.set_array([])
+fig.colorbar(sm2, ax=ax2, fraction=0.035, pad=0.02, label=r"$f_{fused}=\rho f_{sim}+\delta$ (strokes)")
 
 high_rot = np.array([rot_pt(p) for p in high[["x1", "x2"]].values])
 ax2.scatter(low_rot[:, 0], low_rot[:, 1], s=14, facecolor="white", edgecolor="black",
@@ -159,9 +196,9 @@ ax2.scatter(high_rot[:, 0], high_rot[:, 1], s=16, marker="^", facecolor="black",
 draw_markers(ax2)
 ax2.set_aspect("equal")
 ax2.set_title(r"Multi-fidelity GPR (KOH) — fused on $\mathcal{D}_L$ + $\mathcal{D}_H$")
-ax2.set_xlabel("$x_1$ (yards)"); ax2.set_ylabel("$x_2$ (yards)")
+ax2.set_xlabel("$x_2$ (yards)"); ax2.set_ylabel("$x_1$ (yards)")
 ax2.legend(loc="upper right", fontsize=8, framealpha=0.85)
 
-out = HERE / "gpr_comparison_stacked.png"
+out = HERE.parent / "TowardsEnd" / "On_Par" / "images" / "gpr_comparison_stacked.png"
 fig.savefig(out, dpi=150, bbox_inches="tight")
 print("saved", out)
